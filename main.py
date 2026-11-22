@@ -74,7 +74,7 @@ def is_virtual_machine() -> tuple[bool, str]:
         cpu_info = Path("/proc/cpuinfo").read_text(
             encoding="utf-8", errors="replace"
         ).lower()
-        if re.search(r"^flags\\s*:.*\\bhypervisor\\b", cpu_info, re.MULTILINE):
+        if re.search(r"^flags\s*:.*\bhypervisor\b", cpu_info, re.MULTILINE):
             return True, "hypervisor CPU flag"
     except OSError:
         pass
