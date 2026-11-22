@@ -215,7 +215,7 @@ def write_scoring_report() -> None:
 
 def desktop_exec_quote(value: str) -> str:
     """Quote one executable/argument for a freedesktop .desktop Exec field."""
-    return '"' + value.replace("\\\\", "\\\\\\\\").replace('"', '\\\\"') + '"'
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\\"') + '"'
 
 
 def write_desktop_launcher() -> None:
@@ -223,15 +223,14 @@ def write_desktop_launcher() -> None:
     desktop_dir = Path.home() / "Desktop"
     desktop_dir.mkdir(parents=True, exist_ok=True)
     launcher_path = desktop_dir / "Scoring Report.desktop"
-    python_path = Path(sys.executable).resolve()
-    main_path = (ROOT / "main.py").resolve()
+    main_path = (ROOT / "main.sh").resolve()
     launcher = "\n".join((
         "[Desktop Entry]",
         "Version=1.0",
         "Type=Application",
         "Name=Scoring Report",
         "Comment=Start cp-sim and open the live scoring report",
-        f"Exec={desktop_exec_quote(str(python_path))} {desktop_exec_quote(str(main_path))} --open",
+        f"Exec={desktop_exec_quote(str(main_path))} --open",
         "Terminal=true",
         "Categories=Education;Development;",
         "",
