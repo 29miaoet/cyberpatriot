@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cp-sim — Scoring Report</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 52rem; padding: 0 1rem; }
+    li { margin: .5rem 0; }
+    .muted { color: #666; }
+    .error { color: #a21d1d; }
+  </style>
+</head>
+<body>
+  <h1>Scoring Report</h1>
+  <p class="muted">Live detector results. This page refreshes automatically.</p>
+  <p id="updated" class="muted">Loading…</p>
+  <ul id="checks" aria-live="polite"></ul>
+  <script>
+    "use strict";
+    const checks = document.getElementById("checks");
+    const updated = document.getElementById("updated");
+    const scoresUrl = "{{ url_for('api_scores') }}";
+
+    async function refreshScores() {
+      try {
+        const response = await fetch(scoresUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const payload = await response.json();
+        checks.replaceChildren();
+
+        for (const item of payload.checks) {
+          // Exit 0 means fixed; exit 1 means unresolved and is intentionally hidden.
+          if (item.status === "fixed") {
+            const li = document.createElement("li");
+            li.textContent = item.message;
+            checks.appendChild(li);
+          } else if (item.status === "error") {
+            const li = document.createElement("li");
+            li.className = "error";
+            li.textContent = item.name + ": detector error (" + item.detail + ")";
+            checks.appendChild(li);
+          }
+        }
+
+        if (checks.children.length === 0) {
+          const li = document.createElement("li");
+          li.className = "muted";
+          li.textContent = "No fixed checks reported.";
+          checks.appendChild(li);
+        }
+        updated.textContent =
+          "Last updated: " + new Date(payload.timestamp).toLocaleTimeString();
+      } catch (error) {
+        updated.textContent = "Unable to retrieve scores: " + error.message;
+      }
+    }
+
+    refreshScores();
+    window.setInterval(refreshScores, 5000);
+  </script>
+</body>
+</html>

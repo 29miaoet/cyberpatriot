@@ -12,6 +12,8 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
+import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,7 +30,7 @@ PORT = 5000
 SCRIPT_TIMEOUT_SECONDS = 120
 MODULE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$")
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=str(ROOT / "templates"))
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger("cp-sim")
 
@@ -202,71 +204,41 @@ def write_module_readme(modules: list[str]) -> None:
 
 
 def write_scoring_report() -> None:
-    document = """<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>cp-sim — Scoring Report</title>
-  <style>
-    body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 52rem; padding: 0 1rem; }
-    li { margin: .5rem 0; }
-    .muted { color: #666; }
-    .error { color: #a21d1d; }
-  </style>
-</head>
-<body>
-  <h1>Scoring Report</h1>
-  <p class="muted">Live detector results. This page refreshes automatically.</p>
-  <p id="updated" class="muted">Loading…</p>
-  <ul id="checks" aria-live="polite"></ul>
-  <script>
-    "use strict";
-    const checks = document.getElementById("checks");
-    const updated = document.getElementById("updated");
-
-    async function refreshScores() {
-      try {
-        const response = await fetch("/api/scores", { cache: "no-store" });
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const payload = await response.json();
-        checks.replaceChildren();
-
-        for (const item of payload.checks) {
-          // Exit 0 means fixed; exit 1 means unresolved and is intentionally hidden.
-          if (item.status === "fixed") {
-            const li = document.createElement("li");
-            li.textContent = item.message;
-            checks.appendChild(li);
-          } else if (item.status === "error") {
-            const li = document.createElement("li");
-            li.className = "error";
-            li.textContent = item.name + ": detector error (" + item.detail + ")";
-            checks.appendChild(li);
-          }
-        }
-
-        if (checks.children.length === 0) {
-          const li = document.createElement("li");
-          li.className = "muted";
-          li.textContent = "No fixed checks reported.";
-          checks.appendChild(li);
-        }
-        updated.textContent =
-          "Last updated: " + new Date(payload.timestamp).toLocaleTimeString();
-      } catch (error) {
-        updated.textContent = "Unable to retrieve scores: " + error.message;
-      }
-    }
-
-    refreshScores();
-    window.setInterval(refreshScores, 5000);
-  </script>
-</body>
-</html>
-"""
+    """Render the report from the standalone Jinja template."""
+    try:
+        document = app.jinja_env.get_template("scoring_report.html").render()
+    except OSError as exc:
+        raise CpSimError(f"Could not load scoring report template: {exc}") from exc
     REPORT_PATH.write_text(document, encoding="utf-8")
     logger.info("Wrote scoring report to %s.", REPORT_PATH)
+
+
+def desktop_exec_quote(value: str) -> str:
+    """Quote one executable/argument for a freedesktop .desktop Exec field."""
+    return '"' + value.replace("\\\\", "\\\\\\\\").replace('"', '\\\\"') + '"'
+
+
+def write_desktop_launcher() -> None:
+    """Create a desktop shortcut that starts cp-sim and opens its web report."""
+    desktop_dir = Path.home() / "Desktop"
+    desktop_dir.mkdir(parents=True, exist_ok=True)
+    launcher_path = desktop_dir / "Scoring Report.desktop"
+    python_path = Path(sys.executable).resolve()
+    main_path = (ROOT / "main.py").resolve()
+    launcher = "\n".join((
+        "[Desktop Entry]",
+        "Version=1.0",
+        "Type=Application",
+        "Name=Scoring Report",
+        "Comment=Start cp-sim and open the live scoring report",
+        f"Exec={desktop_exec_quote(str(python_path))} {desktop_exec_quote(str(main_path))} --open",
+        "Terminal=true",
+        "Categories=Education;Development;",
+        "",
+    ))
+    launcher_path.write_text(launcher, encoding="utf-8")
+    launcher_path.chmod(0o755)
+    logger.info("Created desktop launcher at %s.", launcher_path)
 
 
 def collect_scores() -> list[dict[str, str]]:
@@ -327,6 +299,11 @@ def main() -> int:
         description="Run the VM-only cp-sim scoring service."
     )
     parser.add_argument(
+        "--open",
+        action="store_true",
+        help="open the scoring report in the default browser after the service starts",
+    )
+    parser.add_argument(
         "--apply",
         action="store_true",
         help="execute configured setup.sh scripts before starting the service",
@@ -344,11 +321,15 @@ def main() -> int:
             logger.info("Read-only startup: setup scripts will not be executed.")
         write_module_readme(modules)
         write_scoring_report()
+        write_desktop_launcher()
     except (CpSimError, OSError, subprocess.SubprocessError) as exc:
         logger.error("%s", exc)
         return 1
 
-    logger.info("Scoring report: http://%s:%d/", HOST, PORT)
+    report_url = f"http://{HOST}:{PORT}/"
+    logger.info("Scoring report: %s", report_url)
+    if args.open:
+        threading.Timer(1.5, webbrowser.open, args=(report_url,)).start()
     app.run(host=HOST, port=PORT, debug=False, threaded=True)
     return 0
 
