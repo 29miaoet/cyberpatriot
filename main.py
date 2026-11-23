@@ -12,8 +12,6 @@ import re
 import shutil
 import subprocess
 import sys
-import threading
-import webbrowser
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -336,25 +334,19 @@ def write_scoring_report() -> None:
     logger.info("Wrote scoring report to %s.", REPORT_PATH)
 
 
-def desktop_exec_quote(value: str) -> str:
-    """Quote one executable/argument for a freedesktop .desktop Exec field."""
-    return '"' + value.replace("\\", "\\\\").replace('"', '\\\"') + '"'
-
-
 def write_desktop_launcher() -> None:
-    """Create a desktop shortcut that starts cp-sim and opens its web report."""
+    """Create a desktop shortcut that opens the already-running scoring service."""
     desktop_dir = Path.home() / "Desktop"
     desktop_dir.mkdir(parents=True, exist_ok=True)
     launcher_path = desktop_dir / "Scoring Report.desktop"
-    main_path = (ROOT / "main.sh").resolve()
     launcher = "\n".join((
         "[Desktop Entry]",
         "Version=1.0",
         "Type=Application",
         "Name=Scoring Report",
-        "Comment=Start cp-sim and open the live scoring report",
-        f"Exec={desktop_exec_quote(str(main_path))} --open",
-        "Terminal=true",
+        "Comment=Open the local cp-sim scoring report",
+        "Exec=xdg-open http://127.0.0.1:5000/",
+        "Terminal=false",
         "Categories=Education;Development;",
         "",
     ))
@@ -429,11 +421,6 @@ def main() -> int:
         description="Run the VM-only cp-sim scoring service."
     )
     parser.add_argument(
-        "--open",
-        action="store_true",
-        help="open the scoring report in the default browser after the service starts",
-    )
-    parser.add_argument(
         "--apply",
         action="store_true",
         help="execute configured setup.sh scripts before starting the service",
@@ -456,10 +443,7 @@ def main() -> int:
         logger.error("%s", exc)
         return 1
 
-    report_url = f"http://{HOST}:{PORT}/"
-    logger.info("Scoring report: %s", report_url)
-    if args.open:
-        threading.Timer(1.5, webbrowser.open, args=(report_url,)).start()
+    logger.info("Scoring report: http://%s:%s/", HOST, PORT)
     app.run(host=HOST, port=PORT, debug=False, threaded=True)
     return 0
 
