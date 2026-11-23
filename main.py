@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from flask import Flask, jsonify, send_file
+from markupsafe import Markup
 
 ROOT = Path(__file__).resolve().parent
 SOURCE_DIR = ROOT / "src"
@@ -178,37 +179,156 @@ def apply_setups(modules: list[str]) -> None:
             )
 
 
+def read_os_details() -> dict[str, str]:
+    """Read distribution details supplied by main.sh or /etc/os-release."""
+    values = {
+        "ID": os.environ.get("CP_SIM_OS_ID", ""),
+        "PRETTY_NAME": os.environ.get("CP_SIM_OS_PRETTY_NAME", ""),
+        "VERSION_ID": os.environ.get("CP_SIM_OS_VERSION", ""),
+    }
+    if not all(values.values()):
+        try:
+            for line in Path("/etc/os-release").read_text(
+                encoding="utf-8", errors="replace"
+            ).splitlines():
+                key, separator, value = line.partition("=")
+                if separator and key in values and not values[key]:
+                    values[key] = value.strip().strip('"').strip("'")
+        except OSError:
+            pass
+    return {
+        "id": values["ID"] or "linux",
+        "pretty_name": values["PRETTY_NAME"] or "Linux",
+        "version": values["VERSION_ID"],
+    }
+
+
+def load_module_properties(name: str) -> dict[str, Any]:
+    """Load optional display/scoring metadata without trusting its types."""
+    properties_path = module_directory(name) / "properties.json"
+    try:
+        data: Any = json.loads(properties_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+
+    points = data.get("points", 1)
+    if isinstance(points, bool) or not isinstance(points, (int, float)) or points < 0:
+        points = 1
+    display_name = data.get("name")
+    if not isinstance(display_name, str) or not display_name.strip():
+        display_name = name.replace("_", " ").replace("-", " ").title()
+    fix = data.get("fix")
+    if not isinstance(fix, str):
+        fix = ""
+    return {
+        "name": display_name,
+        "points": points,
+        "fix": fix,
+        "vulnerability": data.get("vulnerability", ""),
+    }
+
+
+def render_template(template_name: str, context: dict[str, Any]) -> str:
+    """Render one HTML template using Flask/Jinja autoescaping."""
+    try:
+        return app.jinja_env.get_template(template_name).render(**context)
+    except Exception as exc:
+        raise CpSimError(
+            f"Could not render templates/{template_name}: {exc}"
+        ) from exc
+
+
 def write_module_readme(modules: list[str]) -> None:
+    """Populate templates/ReadMe.html and write the desktop README."""
     DESKTOP_README_PATH.parent.mkdir(parents=True, exist_ok=True)
-    entries = "\n".join(
-        f"<li><code>{html.escape(name)}</code></li>" for name in modules
-    ) or "<li>No modules are configured.</li>"
-    document = f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>cp-sim — configured modules</title>
-</head>
-<body>
-  <h1>Configured vulnerability modules</h1>
-  <p>Generated from <code>config.json</code>.</p>
-  <ul>
-    {entries}
-  </ul>
-</body>
-</html>
-"""
+    os_details = read_os_details()
+    title = os.environ.get("CP_SIM_TITLE", "CyberPatriot")
+    root_policy = os.environ.get(
+        "CP_SIM_LINUX_ROOT_POLICY",
+        "Use administrative privileges only when necessary. Do not modify "
+        "root account settings unless a verified requirement calls for it.",
+    )
+    # Optional user-authored HTML can be added without changing the template.
+    user_readme_path = ROOT / "UserReadMe.html"
+    try:
+        user_readme_html = Markup(user_readme_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        user_readme_html = Markup("")
+
+    context = {
+        "OS": os_details["pretty_name"],
+        "TITLE": title,
+        "LINUX_ROOT_POLICY": root_policy,
+        "USER_README_HTML": user_readme_html,
+    }
+    document = render_template("ReadMe.html", context)
     DESKTOP_README_PATH.write_text(document, encoding="utf-8")
-    logger.info("Wrote module list to %s.", DESKTOP_README_PATH)
+    logger.info("Wrote module README to %s.", DESKTOP_README_PATH)
 
 
 def write_scoring_report() -> None:
-    """Render the report from the standalone Jinja template."""
-    try:
-        document = app.jinja_env.get_template("scoring_report.html").render()
-    except OSError as exc:
-        raise CpSimError(f"Could not load scoring report template: {exc}") from exc
+    """Populate templates/ScoringReport.html from live module detector results."""
+    modules = load_config()
+    checks = collect_scores()
+    metadata = {name: load_module_properties(name) for name in modules}
+    total_points = sum(metadata[name]["points"] for name in modules)
+    fixed = [item for item in checks if item["status"] == "fixed"]
+    errors = [item for item in checks if item["status"] == "error"]
+    score = sum(metadata[item["name"]]["points"] for item in fixed)
+
+    point_lines = [
+        f"{html.escape(metadata[item['name']]['name'])}: "
+        f"{metadata[item['name']]['points']:g} points"
+        for item in fixed
+    ]
+    point_rows = Markup("<br>\n".join(point_lines)) if point_lines else Markup(
+        "No scored issues fixed yet."
+    )
+    penalty_rows = Markup("None")
+    hint_lines = []
+    for item in checks:
+        if item["status"] == "unresolved":
+            hint = metadata[item["name"]]["fix"] or metadata[item["name"]]["vulnerability"]
+            if hint:
+                hint_lines.append(
+                    f"<li><strong>{html.escape(metadata[item['name']]['name'])}:</strong> "
+                    f"{html.escape(hint)}</li>"
+                )
+    hints = Markup("<ul>\n" + "\n".join(hint_lines) + "\n</ul>") if hint_lines else Markup(
+        "<p>No hints are available for unresolved modules.</p>"
+    )
+
+    if not modules:
+        overall_status, overall_color = "No modules configured", "gray"
+    elif errors:
+        overall_status, overall_color = "Detector errors detected", "red"
+    else:
+        overall_status, overall_color = "Detectors operational", "green"
+
+    context = {
+        "DISPLAY_TEAM_ID": os.environ.get("CP_SIM_TEAM_ID", "Not configured"),
+        "TITLE": os.environ.get("CP_SIM_REPORT_TITLE", "CyberPatriot Scoring Report"),
+        "GENERATED_AT": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "STALE_REPORT_WARNING": Markup(""),
+        "SCORE": f"{score:g}",
+        "TOTAL_POINTS": f"{total_points:g}",
+        "REMOTE_LINKS_SECTION": Markup(""),
+        "OVERALL_COLOR": overall_color,
+        "OVERALL_STATUS": overall_status,
+        "NET_COLOR": "gray",
+        "NET_STATUS": "Not checked",
+        "PENALTY_COUNT": 0,
+        "DETRACTED_POINTS": 0,
+        "PENALTY_ROWS": penalty_rows,
+        "FIXED_COUNT": len(fixed),
+        "SCORED_VULNS": len(modules),
+        "CONTRIBUTED_POINTS": f"{score:g}",
+        "POINT_ROWS": point_rows,
+        "HINTS": hints,
+    }
+    document = render_template("ScoringReport.html", context)
     REPORT_PATH.write_text(document, encoding="utf-8")
     logger.info("Wrote scoring report to %s.", REPORT_PATH)
 

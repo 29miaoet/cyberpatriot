@@ -14,8 +14,8 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
    - `0`: the check is fixed;
    - `1`: the check remains unresolved;
    - any other exit status: detector error.
-6. **Module index:** At startup, generate `~/Desktop/README.html` in the VM, listing the configured module directories.
-7. **Scoring report:** The HTML source lives in `templates/scoring_report.html`. At startup, cp-sim renders it to the repository-root `Scoring Report.html`. The page polls the Flask API and displays successful checks; unresolved checks are omitted and detector errors are reported separately.
+6. **Module index:** At startup, populate `templates/ReadMe.html` with the detected distribution name and project title, then generate `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
+7. **Scoring report:** `templates/ScoringReport.html` is populated at startup using detector results and module metadata, then written to the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, defaulting to 1). Unresolved checks are omitted from the fixed-issue list; detector errors affect the overall status. Penalties, remote links, and internet connectivity are not currently scored; the report displays zero penalties, no remote links, and an explicit “Not checked” connectivity status.
 8. **Desktop shortcut:** At startup, generate `~/Desktop/Scoring Report.desktop`. Double-clicking it launches `main.sh --open`, starts the local scoring service, and opens the report in the default browser. The terminal window remains open while the service runs; close it to stop the service. Some desktop environments require choosing **Allow Launching** or **Trust and Launch** once for a newly generated `.desktop` file.
 9. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
 10. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
@@ -30,7 +30,8 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 ├── requirements.txt
 ├── README.md
 ├── templates/
-│   └── scoring_report.html
+│   ├── ReadMe.html
+│   └── ScoringReport.html
 └── src/
     └── <module>/
         ├── setup.sh          # optional; only run with --apply
@@ -103,4 +104,4 @@ Scripts are invoked with Bash, with their module directory as the working direct
 
 ## Current implementation scope
 
-The application provides configuration parsing, VM gating, opt-in setup execution, generated HTML reports, a desktop launcher, and the Flask scoring API. It does not install system services, daemonize itself, or provide a general-purpose repair/fix workflow. Additional vulnerability modules and their detection logic are maintained separately under `src/`.
+The application provides configuration parsing, VM gating, opt-in setup execution, rendered HTML templates, a desktop launcher, and the Flask scoring API. It does not install system services, daemonize itself, or provide a general-purpose repair/fix workflow. Additional vulnerability modules and their detection logic are maintained separately under `src/`.

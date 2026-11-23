@@ -37,6 +37,19 @@ if [[ ! -r /etc/os-release ]]; then
 fi
 # shellcheck disable=SC1091
 source /etc/os-release
+
+# Pass distribution metadata to the Python template renderer.
+export CP_SIM_OS_ID="${ID:-linux}"
+export CP_SIM_OS_PRETTY_NAME="${PRETTY_NAME:-${NAME:-Linux}}"
+export CP_SIM_OS_VERSION="${VERSION_ID:-}"
+
+# Fail early with a useful message if either HTML template is missing.
+for template in ReadMe.html ScoringReport.html; do
+    if [[ ! -f "$ROOT/templates/$template" ]]; then
+        printf 'cp-sim: required template is missing: %s\\n' "$ROOT/templates/$template" >&2
+        exit 1
+    fi
+done
 if [[ "${ID:-} ${ID_LIKE:-}" != *debian* && "${ID:-} ${ID_LIKE:-}" != *ubuntu* ]]; then
     printf 'cp-sim: automatic dependency installation supports Debian/Ubuntu-based distributions only.\n' >&2
     exit 1
