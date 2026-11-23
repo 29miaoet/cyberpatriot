@@ -214,7 +214,7 @@ def load_module_properties(name: str) -> dict[str, Any]:
         data = {}
 
     points = data.get("points", 1)
-    if isinstance(points, bool) or not isinstance(points, (int, float)) or points < 0:
+    if isinstance(points, bool) or not isinstance(points, int) or points < 0:
         points = 1
     display_name = data.get("name")
     if not isinstance(display_name, str) or not display_name.strip():
@@ -222,11 +222,14 @@ def load_module_properties(name: str) -> dict[str, Any]:
     fix = data.get("fix")
     if not isinstance(fix, str):
         fix = ""
+    vulnerability = data.get("vulnerability")
+    if not isinstance(vulnerability, str):
+        vulnerability = ""
     return {
         "name": display_name,
         "points": points,
         "fix": fix,
-        "vulnerability": data.get("vulnerability", ""),
+        "vulnerability": vulnerability,
     }
 
 

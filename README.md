@@ -61,7 +61,7 @@ The installer:
 4. Installs the Python packages listed in `requirements.txt`.
 5. Starts cp-sim in read-only mode by default.
 
-The script uses `sudo` when not run as root. Internet access and permission to install APT packages are required on the first run. Subsequent runs reuse the virtual environment and do not reinstall already-present system packages.
+The script uses `sudo` when not run as root. Internet access and permission to install APT packages are required on the first run. Subsequent runs reuse the virtual environment and do not reinstall already-present system packages. Optional report values can be set with `CP_SIM_TEAM_ID`, `CP_SIM_TITLE`, `CP_SIM_REPORT_TITLE`, and `CP_SIM_LINUX_ROOT_POLICY` environment variables.
 
 To explicitly apply configured setup scripts before starting the service:
 
@@ -91,7 +91,7 @@ Edit `config.json` to select module directories:
 }
 ```
 
-Names must refer to existing directories directly inside `src/`. Duplicate names and path traversal are rejected.
+Names must refer to existing directories directly inside `src/`. Duplicate names and path traversal are rejected. A module's optional `properties.json` may define `name`, `points` (non-negative integer; default 1), `fix`, and `vulnerability` for report labels and hints.
 
 ## Module contract
 

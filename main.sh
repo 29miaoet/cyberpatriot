@@ -46,7 +46,7 @@ export CP_SIM_OS_VERSION="${VERSION_ID:-}"
 # Fail early with a useful message if either HTML template is missing.
 for template in ReadMe.html ScoringReport.html; do
     if [[ ! -f "$ROOT/templates/$template" ]]; then
-        printf 'cp-sim: required template is missing: %s\\n' "$ROOT/templates/$template" >&2
+        printf 'cp-sim: required template is missing: %s\n' "$ROOT/templates/$template" >&2
         exit 1
     fi
 done
