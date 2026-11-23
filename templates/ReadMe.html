@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>README</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 25px 0 10px;
+        background: #336699 url("./img/background.png") top center / cover fixed;
+        font-family: Helvetica, Arial, sans-serif;
+      }
+      h1 {
+        margin: 10px 0;
+        padding: 0 14px 10px 0;
+        color: #0d2e5b;
+        font-size: 36px;
+        text-align: center;
+      }
+      h2 {
+        margin: 30px 0 10px;
+        color: #0d2e5b;
+        font-size: 18px;
+      }
+      pre {
+        overflow-x: auto;
+        font-size: 16px;
+      }
+      .page {
+        width: min(80%, 1100px);
+        margin: 0 auto;
+      }
+      .main {
+        background: white;
+      }
+      .text {
+        padding: 12px 40px;
+      }
+      .logo {
+        display: block;
+        width: 250px;
+        max-width: 100%;
+        margin: 0 auto;
+      }
+      .footer {
+        margin-top: 1rem;
+        color: white;
+        text-align: center;
+      }
+      .footer ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      @media (max-width: 640px) {
+        .page {
+          width: calc(100% - 20px);
+        }
+        .text {
+          padding: 12px 20px;
+        }
+        h1 {
+          font-size: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <main class="main">
+        <article class="text">
+          <img class="logo" src="./img/logo.png" alt="logo" />
+
+          <h1>{{OS}} {{TITLE}} README</h1>
+
+          <p>
+            Please read the entire README thoroughly before modifying anything
+            on this computer.
+          </p>
+
+          <h2>Unique Identifier</h2>
+          <p>
+            If you have not yet entered a valid Team ID, please do so
+            immediately by double-clicking the “Team ID” icon on the desktop. If
+            you do not enter a valid Team ID, this VM may stop functioning after
+            a short period of time.
+          </p>
+
+          <h2>Forensics Questions</h2>
+          <p>
+            If there are “Forensics Questions” on your Desktop, you will receive
+            points for answering these questions correctly. Valid scored
+            questions will only be located directly on your Desktop. Read them
+            thoroughly before modifying the computer because a change might
+            prevent you from answering correctly.
+          </p>
+
+          <h2>Competition Scenario</h2>
+          <p>
+            This company’s security policies require all user accounts to be
+            password protected. Employees must choose secure passwords, although
+            this policy may not currently be enforced. Non-work-related media
+            files and hacking tools are prohibited. The company does not use
+            centralized maintenance or polling tools to manage its IT equipment.
+            This computer is for official business use by authorized users and
+            is a critical production system. Do not attempt to upgrade its
+            operating system.
+          </p>
+
+          <h2>{{OS}}</h2>
+          <p>
+            It is company policy to use only {{OS}} on this computer and only
+            the latest official stable {{OS}} packages available for required
+            software and services. The default browser for all users must be the
+            latest stable version of Firefox. {{LINUX_ROOT_POLICY}}
+          </p>
+
+          {{USER_README_HTML}}
+
+          <h2>Competition Guidelines</h2>
+          <ul>
+            <li>
+              You are <strong>not</strong> required to change the password of
+              the primary auto-login account. Doing so may lock you out.
+            </li>
+            <li>
+              Authorized administrator passwords were correct during the last
+              password audit but are not guaranteed to remain accurate.
+            </li>
+            <li>Do not disable or stop the CSSClient service or process.</li>
+            <li>Do not remove authorized users or their home directories.</li>
+            <li>
+              The image uses UTC. Do not change its time zone, date, or time.
+            </li>
+            <li>
+              Open the current scoring report using the “Scoring Report” desktop
+              icon.
+            </li>
+            <li>
+              JavaScript is required for some scoring-report error messages. Do
+              not disable it.
+            </li>
+            <li>
+              Some security settings may prevent the Stop Scoring application
+              from running. If that happens, suspend the virtual machine. Do
+              <strong>not</strong> power it on again before deleting it.
+            </li>
+          </ul>
+
+          <p style="text-align: center">
+            This project is in no way affiliated with or endorsed by the Air
+            Force Association or the University of Texas at San Antonio.
+          </p>
+        </article>
+      </main>
+
+      <footer class="footer">
+        <ul>
+          <li>Copyright Never &copy;</li>
+          <li>No rights reserved</li>
+        </ul>
+      </footer>
+    </div>
+  </body>
+</html>

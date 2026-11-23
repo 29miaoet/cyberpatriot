@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="60" />
+    <title>Scoring Report</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        min-height: 100%;
+      }
+      body {
+        margin: 0;
+        padding: 10px;
+        background: #336699 url("./img/background.png") top center / cover fixed;
+        font:
+          14px Arial,
+          Verdana,
+          sans-serif;
+      }
+      h1,
+      h2,
+      .center {
+        text-align: center;
+      }
+      ul {
+        margin-top: 0.5rem;
+      }
+      .red {
+        color: red;
+      }
+      .green {
+        color: green;
+      }
+      .blue {
+        color: blue;
+      }
+      .gray {
+        color: gray;
+      }
+      .main {
+        width: min(900px, 100%);
+        margin: 0 auto;
+        overflow: hidden;
+        border-radius: 12px;
+        background: white;
+        box-shadow: 0 0 12px #003366;
+      }
+      .text {
+        padding: 12px;
+      }
+      .logo {
+        display: block;
+        width: 180px;
+        max-width: 100%;
+        margin: 0 auto;
+      }
+      .binary {
+        position: relative;
+        overflow: hidden;
+      }
+      .binary > * {
+        position: relative;
+        z-index: 1;
+      }
+      .binary::before {
+        position: absolute;
+        z-index: 0;
+        top: -1000px;
+        left: -1000px;
+        display: block;
+        width: 500%;
+        height: 300%;
+        transform: rotate(-45deg);
+        content: attr(data-binary);
+        opacity: 0.15;
+        line-height: 2em;
+        letter-spacing: 2px;
+        color: #369;
+        font-size: 10px;
+        pointer-events: none;
+        white-space: normal;
+      }
+      .footer {
+        margin-top: 2rem;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="main">
+      <div class="text">
+        <section class="binary" data-binary="{{DISPLAY_TEAM_ID}}">
+          <img class="logo" src="./img/logo.png" alt="logo" />
+
+          <h1>{{TITLE}}</h1>
+          <h2>Report Generated At: {{GENERATED_AT}}</h2>
+
+          {{STALE_REPORT_WARNING}}
+
+          <h2>{{SCORE}} out of {{TOTAL_POINTS}} points received</h2>
+
+          {{REMOTE_LINKS_SECTION}}
+
+          <section aria-labelledby="connection-heading">
+            <h3 id="connection-heading">
+              Connection Status:
+              <span class="{{OVERALL_COLOR}}">{{OVERALL_STATUS}}</span>
+            </h3>
+            <p>
+              Internet Connectivity Check:
+              <span class="{{NET_COLOR}}">{{NET_STATUS}}</span><br />
+            </p>
+          </section>
+
+          <section aria-labelledby="penalties-heading">
+            <h3 id="penalties-heading">
+              {{PENALTY_COUNT}} penalties assessed, for a loss of
+              {{DETRACTED_POINTS}} points:
+            </h3>
+            <p class="red">{{PENALTY_ROWS}}</p>
+          </section>
+
+          <section aria-labelledby="points-heading">
+            <h3 id="points-heading">
+              {{FIXED_COUNT}} out of {{SCORED_VULNS}} scored security issues
+              fixed, for a gain of {{CONTRIBUTED_POINTS}} points:
+            </h3>
+            <p>{{POINT_ROWS}}</p>
+          </section>
+
+          <section aria-label="Hints">{{HINTS}}</section>
+
+          <footer class="footer">
+            <p>
+              This project is free and open source software. This project is in
+              no way endorsed by or affiliated with the Air Force Association or
+              the University of Texas at San Antonio.
+            </p>
+          </footer>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const binaryElements = document.querySelectorAll(".binary");
+      binaryElements.forEach((element) => {
+        const value = element.dataset.binary || "";
+        element.dataset.binary = value ? `${value} `.repeat(10000) : "";
+      });
+    </script>
+  </body>
+</html>
