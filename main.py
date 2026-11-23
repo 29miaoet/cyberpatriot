@@ -401,7 +401,15 @@ def collect_scores() -> list[dict[str, str]]:
 
 @app.get("/")
 def scoring_report():
-    return send_file(REPORT_PATH)
+    try:
+        # The template uses a periodic page refresh; regenerate scores each time.
+        write_scoring_report()
+    except (CpSimError, OSError, subprocess.SubprocessError) as exc:
+        logger.error("Could not refresh scoring report: %s", exc)
+        return "Unable to generate scoring report. Check the cp-sim terminal output.", 500
+    response = send_file(REPORT_PATH, max_age=0)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/scores")
