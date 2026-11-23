@@ -76,7 +76,7 @@ Do not use `--apply` on a host machine or a VM containing data you need to prese
 - The installer starts the service and prints its local URL: [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
 - Alternatively, double-click **Scoring Report** on the VM desktop. The shortcut starts the service and opens the report in the default browser.
 - Keep the terminal window open while viewing the report. Closing it stops the Flask service.
-- Do not open the generated `Scoring Report.html` directly as a local file. Its live results are retrieved from the Flask API, so it must be served by the running application.
+- Do not open the generated `Scoring Report.html` directly as a local file. It must be served by Flask; each page load regenerates the report from current detector results, and the template refreshes the page every 60 seconds.
 - The page refreshes detector results every five seconds.
 
 ## Configuration
