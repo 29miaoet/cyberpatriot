@@ -16,7 +16,7 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
    - any other exit status: detector error.
 6. **Module index:** At startup, populate `templates/ReadMe.html` with the detected distribution name and project title, then generate `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
 7. **Scoring report:** `templates/ScoringReport.html` is populated at startup using detector results and module metadata, then written to the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, defaulting to 1). Unresolved checks are omitted from the fixed-issue list; detector errors affect the overall status. Penalties, remote links, and internet connectivity are not currently scored; the report displays zero penalties, no remote links, and an explicit “Not checked” connectivity status.
-8. **Desktop shortcut:** At startup, generate `~/Desktop/Scoring Report.desktop`. Double-clicking it launches `main.sh --open`, starts the local scoring service, and opens the report in the default browser. The terminal window remains open while the service runs; close it to stop the service. Some desktop environments require choosing **Allow Launching** or **Trust and Launch** once for a newly generated `.desktop` file.
+8. **Desktop shortcut:** At startup, generate `~/Desktop/Scoring Report.desktop`. It is a small launcher that runs `xdg-open http://127.0.0.1:5000/` in the default browser; it does not start or manage the Flask service. Start the service separately with `./main.sh`. Some desktop environments require choosing **Allow Launching** or **Trust and Launch** once for a newly generated `.desktop` file.
 9. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
 10. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
 
@@ -74,8 +74,8 @@ Do not use `--apply` on a host machine or a VM containing data you need to prese
 ## Using the scoring report
 
 - The installer starts the service and prints its local URL: [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
-- Alternatively, double-click **Scoring Report** on the VM desktop. The shortcut starts the service and opens the report in the default browser.
-- Keep the terminal window open while viewing the report. Closing it stops the Flask service.
+- Alternatively, double-click **Scoring Report** on the VM desktop to open the report in the default browser. The Flask service must already be running.
+- Start the service separately with `./main.sh`; keep its terminal window open while viewing the report. Closing it stops the service.
 - Do not open the generated `Scoring Report.html` directly as a local file. It must be served by Flask; each page load regenerates the report from current detector results, and the template refreshes the page every 60 seconds.
 - The page refreshes detector results every five seconds.
 
