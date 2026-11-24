@@ -122,6 +122,37 @@ def load_config() -> list[str]:
     return modules
 
 
+def load_user_lists() -> dict[str, list[str]]:
+    """Load and validate the four account lists used by the users module."""
+    path = SOURCE_DIR / "users" / "users.json"
+    try:
+        data: Any = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise CpSimError(f"User configuration not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise CpSimError(f"Invalid JSON in {path}: {exc}") from exc
+
+    keys = {
+        "authorizedUsers", "unauthorizedUsers",
+        "authorizedAdministrators", "unauthorizedAdministrators",
+    }
+    if not isinstance(data, dict) or set(data) != keys:
+        raise CpSimError(f"{path} must contain exactly: {', '.join(sorted(keys))}.")
+    username_pattern = re.compile(r"^[a-z_][a-z0-9_-]*[$]?$")
+    result: dict[str, list[str]] = {}
+    for key in keys:
+        values = data[key]
+        if not isinstance(values, list) or any(
+            not isinstance(value, str) or not username_pattern.fullmatch(value)
+            for value in values
+        ):
+            raise CpSimError(f'{path}: "{key}" must be an array of valid Linux usernames.')
+        if len(values) != len(set(values)):
+            raise CpSimError(f'{path}: "{key}" must not contain duplicate usernames.')
+        result[key] = values
+    return result
+
+
 def module_directory(name: str) -> Path:
     candidate = (SOURCE_DIR / name).resolve()
     try:
@@ -274,14 +305,26 @@ def write_scoring_report() -> None:
     modules = load_config()
     checks = collect_scores()
     metadata = {name: load_module_properties(name) for name in modules}
-    total_points = sum(metadata[name]["points"] for name in modules)
+    user_lists = load_user_lists() if "users" in modules else None
+    total_points = sum(
+        metadata[name]["points"] * (
+            len(user_lists["unauthorizedUsers"])
+            + len(set(user_lists["unauthorizedAdministrators"])
+                  - set(user_lists["unauthorizedUsers"]))
+            if name == "users" and user_lists is not None else 1
+        )
+        for name in modules
+    )
     fixed = [item for item in checks if item["status"] == "fixed"]
     errors = [item for item in checks if item["status"] == "error"]
-    score = sum(metadata[item["name"]]["points"] for item in fixed)
+    score = sum(
+        item.get("points", metadata[item["name"]]["points"])
+        for item in fixed
+    )
 
     point_lines = [
-        f"{html.escape(metadata[item['name']]['name'])}: "
-        f"{metadata[item['name']]['points']:g} points"
+        f"{html.escape(item.get('label', metadata[item['name']]['name']))}: "
+        f"{item.get('points', metadata[item['name']]['points']):g} points"
         for item in fixed
     ]
     point_rows = Markup("<br>\n".join(point_lines)) if point_lines else Markup(
@@ -294,7 +337,7 @@ def write_scoring_report() -> None:
             hint = metadata[item["name"]]["fix"] or metadata[item["name"]]["vulnerability"]
             if hint:
                 hint_lines.append(
-                    f"<li><strong>{html.escape(metadata[item['name']]['name'])}:</strong> "
+                    f"<li><strong>{html.escape(item.get('label', metadata[item['name']]['name']))}:</strong> "
                     f"{html.escape(hint)}</li>"
                 )
     hints = Markup("<ul>\n" + "\n".join(hint_lines) + "\n</ul>") if hint_lines else Markup(
@@ -324,7 +367,7 @@ def write_scoring_report() -> None:
         "DETRACTED_POINTS": 0,
         "PENALTY_ROWS": penalty_rows,
         "FIXED_COUNT": len(fixed),
-        "SCORED_VULNS": len(modules),
+        "SCORED_VULNS": len(checks),
         "CONTRIBUTED_POINTS": f"{score:g}",
         "POINT_ROWS": point_rows,
         "HINTS": hints,
@@ -355,11 +398,73 @@ def write_desktop_launcher() -> None:
     logger.info("Created desktop launcher at %s.", launcher_path)
 
 
-def collect_scores() -> list[dict[str, str]]:
+def collect_user_scores(directory: Path) -> list[dict[str, Any]]:
+    """Score each unauthorized account independently, with user-removal precedence."""
+    users = load_user_lists()
+    expected = (
+        [("UNAUTHORIZED_USER", name, f"Unauthorized user: {name}")
+         for name in users["unauthorizedUsers"]]
+        + [("UNAUTHORIZED_ADMIN", name, f"Unauthorized administrator: {name}")
+           for name in users["unauthorizedAdministrators"]
+           if name not in set(users["unauthorizedUsers"])]
+    )
+    detector = directory / "detect.sh"
+    if not detector.is_file():
+        return [{"name": "users", "status": "error", "detail": "detect.sh is missing"}]
+    try:
+        result = run_module_script(detector, directory, "detect.sh")
+    except subprocess.TimeoutExpired:
+        return [{"name": "users", "status": "error", "detail": "detector timed out"}]
+
+    if result.returncode not in (0, 1):
+        return [{
+            "name": "users", "status": "error",
+            "detail": f"detector exited with status {result.returncode}",
+        }]
+
+    findings: set[tuple[str, str]] = set()
+    valid_findings = {
+        ("UNAUTHORIZED_USER", name) for name in users["unauthorizedUsers"]
+    } | {
+        ("UNAUTHORIZED_ADMIN", name)
+        for name in users["unauthorizedAdministrators"]
+        if name not in set(users["unauthorizedUsers"])
+    }
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        kind, separator, username = line.partition(":")
+        finding = (kind, username)
+        if not separator or finding not in valid_findings:
+            return [{
+                "name": "users", "status": "error",
+                "detail": f"invalid detector output: {line!r}",
+            }]
+        findings.add(finding)
+
+    if bool(findings) != (result.returncode == 1):
+        return [{
+            "name": "users", "status": "error",
+            "detail": "detector exit status did not match its findings",
+        }]
+
+    return [{
+        "name": "users",
+        "label": label,
+        "status": "unresolved" if (kind, username) in findings else "fixed",
+        "points": 3,
+        "detail": f"{kind.lower().replace('_', ' ')} remains present",
+    } for kind, username, label in expected]
+
+
+def collect_scores() -> list[dict[str, Any]]:
     modules = load_config()
-    checks: list[dict[str, str]] = []
+    checks: list[dict[str, Any]] = []
     for name in modules:
         directory = module_directory(name)
+        if name == "users":
+            checks.extend(collect_user_scores(directory))
+            continue
         detector = directory / "detect.sh"
         if not detector.is_file():
             checks.append({
