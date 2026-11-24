@@ -26,6 +26,16 @@ def render_template(template_name: str, context: dict[str, Any]) -> str:
         raise CpSimError(f"Could not render templates/{template_name}: {exc}") from exc
 
 
+def render_account_list(usernames: list[str]) -> Markup:
+    """Render configured account names as an escaped HTML list."""
+    if not usernames:
+        return Markup("<p>None configured.</p>")
+    items = Markup("").join(
+        Markup("<li>{}</li>").format(username) for username in usernames
+    )
+    return Markup("<ul>{}</ul>").format(items)
+
+
 def write_module_readme(modules: list[str]) -> None:
     """Populate the module README template and write the desktop README."""
     DESKTOP_README_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -40,9 +50,20 @@ def write_module_readme(modules: list[str]) -> None:
         user_readme_html = Markup((ROOT / "UserReadMe.html").read_text(encoding="utf-8"))
     except FileNotFoundError:
         user_readme_html = Markup("")
+    if "users" in modules:
+        user_lists = load_user_lists()
+        authorized_users = render_account_list(user_lists["authorizedUsers"])
+        authorized_administrators = render_account_list(
+            user_lists["authorizedAdministrators"]
+        )
+    else:
+        authorized_users = Markup("<p>Not configured.</p>")
+        authorized_administrators = Markup("<p>Not configured.</p>")
     document = render_template("ReadMe.html", {
         "OS": os_details["pretty_name"], "TITLE": title,
         "LINUX_ROOT_POLICY": root_policy, "USER_README_HTML": user_readme_html,
+        "AUTHORIZED_USERS": authorized_users,
+        "AUTHORIZED_ADMINISTRATORS": authorized_administrators,
     })
     DESKTOP_README_PATH.write_text(document, encoding="utf-8")
     logger.info("Wrote module README to %s.", DESKTOP_README_PATH)
