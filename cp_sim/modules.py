@@ -27,27 +27,37 @@ def run_module_script(
     )
 
 
-def apply_setups(modules: list[str]) -> None:
+def _run_module_scripts(modules: list[str], script_name: str, action: str) -> None:
     for name in modules:
         directory = module_directory(name)
-        setup_script = directory / "setup.sh"
-        if not setup_script.exists():
-            logger.info("No setup.sh found for %s; skipping.", name)
+        script = directory / script_name
+        if not script.exists():
+            logger.info("No %s found for %s; skipping.", script_name, name)
             continue
-        logger.info("Running setup.sh for %s (--apply was supplied).", name)
+        logger.info("Running %s for %s (--%s was supplied).", script_name, name, action)
         try:
-            result = run_module_script(setup_script, directory, "setup.sh")
+            result = run_module_script(script, directory, script_name)
         except subprocess.TimeoutExpired as exc:
-            raise CpSimError(f"setup.sh timed out for {name}.") from exc
+            raise CpSimError(f"{script_name} timed out for {name}.") from exc
         if result.stdout:
             logger.info("%s", result.stdout.rstrip())
         if result.stderr:
             logger.warning("%s", result.stderr.rstrip())
         if result.returncode != 0:
             raise CpSimError(
-                f"setup.sh for {name} exited with status {result.returncode}; "
-                "remaining setup scripts were not run."
+                f"{script_name} for {name} exited with status {result.returncode}; "
+                f"remaining {script_name} scripts were not run."
             )
+
+
+def apply_setups(modules: list[str]) -> None:
+    """Execute configured setup.sh scripts to prepare practice states."""
+    _run_module_scripts(modules, "setup.sh", "apply")
+
+
+def apply_fixes(modules: list[str]) -> None:
+    """Execute configured fix.sh scripts to remediate practice states."""
+    _run_module_scripts(modules, "fix.sh", "fix")
 
 
 def load_module_properties(name: str) -> dict[str, Any]:
