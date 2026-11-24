@@ -30,10 +30,12 @@ def collect_user_scores(directory: Path) -> list[dict[str, Any]]:
         return [{"name": "users", "status": "error",
                  "detail": f"detector exited with status {result.returncode}"}]
     valid_findings = {
-        *(("UNAUTHORIZED_USER", name) for name in users["unauthorizedUsers"]),
-        *(("UNAUTHORIZED_ADMIN", name) for name in users["unauthorizedAdministrators"]
-          if name not in unauthorized_users),
+        ("UNAUTHORIZED_USER", name) for name in users["unauthorizedUsers"]
     }
+    valid_findings.update(
+        ("UNAUTHORIZED_ADMIN", name) for name in users["unauthorizedAdministrators"]
+        if name not in unauthorized_users
+    )
     findings: set[tuple[str, str]] = set()
     for line in result.stdout.splitlines():
         if not line.strip():
