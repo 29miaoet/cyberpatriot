@@ -12,12 +12,14 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 4. **Project modules:** Each vulnerability is represented by a subdirectory under `src/` (for example, `src/ufw/`).
 5. **Configuration:** The root `config.json` is one JSON object with a single `vulnerabilities` array. Each element is the name of a directory directly under `src/`.
 6. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`. The users module creates configured authorized accounts and grants the `sudo` group only to authorized administrators. Newly created accounts have locked passwords.
-7. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when the check is fixed, `1` when unresolved, and any other status for detector errors.
-8. **Module index:** At startup, populate `templates/ReadMe.html` with detected distribution information and write `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
-9. **Scoring report:** Populate `templates/ScoringReport.html` at startup and on each report request, then write the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, default 1). The users module scores each distinct unauthorized user/admin finding at 3 points, with unauthorized-user removal taking precedence.
-10. **Desktop shortcut:** Generate `~/Desktop/Scoring Report.desktop`. It opens `http://127.0.0.1:5000/` in the default browser; it does not start or manage Flask.
-11. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
-12. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
+7. **User policy enforcement:** The users setup script creates authorized accounts, grants the `sudo` group to authorized administrators, removes unauthorized users, and demotes unauthorized administrators. It verifies the resulting account state and reports each action. Newly created accounts have locked passwords; assign passwords separately before interactive login.
+8. **Generated README account lists:** When the users module is enabled, the generated desktop README displays the parsed `authorizedUsers` and `authorizedAdministrators` arrays from `src/users/users.json`.
+9. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when the check is fixed, `1` when unresolved, and any other status for detector errors.
+10. **Module index:** At startup, populate `templates/ReadMe.html` with detected distribution information and write `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
+11. **Scoring report:** Populate `templates/ScoringReport.html` at startup and on each report request, then write the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, default 1). The users module scores each distinct unauthorized user/admin finding at 3 points, with unauthorized-user removal taking precedence.
+12. **Desktop shortcut:** Generate `~/Desktop/Scoring Report.desktop`. It opens `http://127.0.0.1:5000/` in the default browser; it does not start or manage Flask.
+13. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
+14. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
 
 ## Repository layout
 
