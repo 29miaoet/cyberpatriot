@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-USERS_FILE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/users.json"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+USERS_FILE="$SCRIPT_DIR/users.json"
+FIX_SCRIPT="$SCRIPT_DIR/fix.sh"
+
 if [[ ! -r "$USERS_FILE" ]]; then
     printf 'users: cannot read %s\n' "$USERS_FILE" >&2
     exit 2
@@ -64,23 +67,82 @@ is_admin() {
 # Ensure the standard Debian/Ubuntu administrative group exists.
 if ! getent group sudo >/dev/null; then
     run_privileged groupadd sudo
+    printf 'users: created administrative group sudo\n'
 fi
 
-# An administrator is also an account that must exist.
+# Create all authorized accounts. Administrators are also users.
 for username in "${!AUTH_USERS[@]}" "${!AUTH_ADMINS[@]}"; do
     [[ -n "$username" ]] || continue
-    # An explicitly unauthorized user must never be recreated.
-    [[ -n "${UNAUTH_USERS[$username]:-}" ]] && continue
-    if ! getent passwd "$username" >/dev/null; then
+
+    # Unauthorized-user removal takes precedence over authorization.
+    if [[ -n "${UNAUTH_USERS[$username]:-}" ]]; then
+        printf 'users: skipping %s because it is listed as unauthorized\n' "$username"
+        continue
+    fi
+
+    if getent passwd "$username" >/dev/null; then
+        printf 'users: account %s already exists\n' "$username"
+    else
         run_privileged useradd --create-home --shell /bin/bash "$username"
-        run_privileged passwd --lock "$username"
+        run_privileged passwd --lock "$username" >/dev/null
+        printf 'users: created account %s (password locked)\n' "$username"
+    fi
+
+    if ! getent passwd "$username" >/dev/null; then
+        printf 'users: account creation failed verification for %s\n' "$username" >&2
+        exit 1
     fi
 done
 
-# Grant sudo only when the account is not explicitly denied administrator rights.
+# Grant sudo only to explicitly authorized administrators.
 for username in "${!AUTH_ADMINS[@]}"; do
     [[ -n "$username" ]] || continue
     [[ -n "${UNAUTH_USERS[$username]:-}" ]] && continue
     [[ -n "${UNAUTH_ADMINS[$username]:-}" ]] && continue
-    run_privileged usermod --append --groups sudo "$username"
+
+    if ! getent passwd "$username" >/dev/null; then
+        printf 'users: cannot grant administrator privileges; account %s is missing\n' "$username" >&2
+        exit 1
+    fi
+    if id -nG "$username" | tr ' ' '\n' | grep -Fxq sudo; then
+        printf 'users: %s already belongs to sudo\n' "$username"
+    else
+        run_privileged usermod --append --groups sudo "$username"
+        printf 'users: granted sudo membership to %s\n' "$username"
+    fi
 done
+
+# Apply the deny lists too: remove unauthorized accounts and demote
+# unauthorized administrators, while preserving the precedence rule.
+if [[ ! -x "$FIX_SCRIPT" ]]; then
+    printf 'users: required remediation script is missing or not executable: %s\n' "$FIX_SCRIPT" >&2
+    exit 1
+fi
+"$FIX_SCRIPT"
+
+# Verify the requested account policy after remediation.
+for username in "${!AUTH_USERS[@]}" "${!AUTH_ADMINS[@]}"; do
+    [[ -n "$username" ]] || continue
+    if [[ -n "${UNAUTH_USERS[$username]:-}" ]]; then
+        if getent passwd "$username" >/dev/null; then
+            printf 'users: unauthorized account %s still exists after remediation\n' "$username" >&2
+            exit 1
+        fi
+        continue
+    fi
+    if ! getent passwd "$username" >/dev/null; then
+        printf 'users: authorized account %s is missing after setup\n' "$username" >&2
+        exit 1
+    fi
+done
+
+for username in "${!AUTH_ADMINS[@]}"; do
+    [[ -n "$username" ]] || continue
+    [[ -n "${UNAUTH_USERS[$username]:-}" || -n "${UNAUTH_ADMINS[$username]:-}" ]] && continue
+    if ! is_admin "$username"; then
+        printf 'users: authorized administrator %s lacks administrative group membership\n' "$username" >&2
+        exit 1
+    fi
+done
+
+printf 'users: account setup and policy verification completed successfully\n'
