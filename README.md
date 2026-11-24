@@ -146,7 +146,7 @@ This file provides the UFW module's display name, supported distribution labels,
   "difficulty": 1,
   "points": 3,
   "vulnerability": "Misconfigured firewall can allow attackers in through backdoors.",
-  "fix": "Open terminal, run \\"sudo ufw enable\\""
+  "fix": "Open terminal, run \"sudo ufw enable\""
 }
 ```
 
