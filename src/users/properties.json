@@ -1,0 +1,6 @@
+{
+  "name": "Authorized Users and Administrators",
+  "points": 3,
+  "vulnerability": "Unauthorized accounts and unauthorized administrative privileges weaken system access control.",
+  "fix": "Remove every unauthorized user account. For accounts listed only as unauthorized administrators, remove membership in sudo, admin, and wheel while preserving the account."
+}
