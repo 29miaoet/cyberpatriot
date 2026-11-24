@@ -9,7 +9,7 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 1. **Target environment:** Debian/Ubuntu-based Linux virtual machines, including Ubuntu, Debian, and Linux Mint. The VM check is heuristic and may not recognize every hypervisor configuration.
 2. **Project structure:** Each vulnerability is represented by a subdirectory under `src/` (for example, `src/ufw/`).
 3. **Configuration:** The root `config.json` is one JSON object with a single `vulnerabilities` array. Each array element is the name of a directory directly under `src/`.
-4. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`.
+4. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`. The users module creates configured authorized accounts and grants the `sudo` group only to authorized administrators. Newly created accounts have locked passwords and require a separate password policy before interactive login.
 5. **Detection scripts:** A module may contain `detect.sh`. It returns:
    - `0`: the check is fixed;
    - `1`: the check remains unresolved;
@@ -92,6 +92,8 @@ Edit `config.json` to select module directories:
 ```
 
 Names must refer to existing directories directly inside `src/`. Duplicate names and path traversal are rejected. A module's optional `properties.json` may define `name`, `points` (non-negative integer; default 1), `fix`, and `vulnerability` for report labels and hints.
+
+The `src/users/users.json` file must contain exactly four arrays: `authorizedUsers`, `unauthorizedUsers`, `authorizedAdministrators`, and `unauthorizedAdministrators`. Account names must be valid Linux usernames; the protected `root` account is rejected. During `--apply`, authorized users and administrators are created if absent, and authorized administrators are added to `sudo`. Newly created accounts are password-locked. The users detector treats each unauthorized user and each unauthorized administrator as a separate 3-point issue. If an account appears in both unauthorized lists, unauthorized-user removal takes precedence and it is counted once. The users module's `fix.sh` removes unauthorized users and strips administrative group membership from unauthorized administrators without deleting those latter accounts.
 
 ## Module contract
 
