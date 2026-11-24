@@ -81,6 +81,19 @@ if [[ "$packages_missing" == true ]]; then
     "${APT[@]}" install -y python3 python3-venv python3-pip
 fi
 
+# Validate project configuration before creating the virtual environment.
+python3 - <<'PY'
+from cp_sim.config import load_config, load_user_lists
+
+try:
+    modules = load_config()
+    if "users" in modules:
+        load_user_lists()
+except Exception as exc:
+    print(f"cp-sim: invalid project configuration: {exc}", file=__import__("sys").stderr)
+    raise SystemExit(1)
+PY
+
 VENV="$ROOT/.venv"
 python3 -m venv "$VENV"
 "$VENV/bin/python" -m pip install -r "$ROOT/requirements.txt"
