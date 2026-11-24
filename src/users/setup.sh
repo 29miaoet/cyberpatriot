@@ -3,7 +3,7 @@ set -euo pipefail
 
 USERS_FILE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/users.json"
 if [[ ! -r "$USERS_FILE" ]]; then
-    printf 'users: cannot read %s\\n' "$USERS_FILE" >&2
+    printf 'users: cannot read %s\n' "$USERS_FILE" >&2
     exit 2
 fi
 
