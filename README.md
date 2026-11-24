@@ -10,7 +10,7 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 2. **Single entry point:** `main.sh` is the only supported entry point. It checks the VM environment, installs missing system dependencies, creates the project virtual environment, installs Python requirements, and starts the application.
 3. **Application structure:** Python application code is organized in the `cp_sim/` package by responsibility. `cp_sim/__main__.py` coordinates startup; it is not intended to be invoked directly.
 4. **Project modules:** Each vulnerability is represented by a subdirectory under `src/` (for example, `src/ufw/`).
-5. **Configuration:** The root `config.json` is one JSON object with a single `vulnerabilities` array. Each element is the name of a directory directly under `src/`.
+5. **Configuration:** The root `config.json` selects module directories through a `vulnerabilities` array. Each entry is the name of a directory directly under `src/`.
 6. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`. They prepare the configured practice state and do not run remediation scripts.
 7. **Fix scripts:** A module may contain `fix.sh`. Fix scripts execute only when the user explicitly supplies `--fix`. They remediate the configured practice state. `--apply` and `--fix` are mutually exclusive.
 8. **User setup policy:** The users module's `setup.sh` creates configured authorized accounts, adds them to the shared `users` group, and grants the `sudo` group only to authorized administrators. Newly created accounts have locked passwords. It does not remove or demote accounts on the deny lists.
@@ -23,31 +23,40 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 15. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
 16. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
 
-## Repository layout
+## Repository structure
 
 ```text
 .
-├── main.sh                  # sole entry point
+├── main.sh                      # sole supported entry point
+├── config.json                  # enabled module directory names
+├── requirements.txt             # Python dependencies
 ├── cp_sim/
 │   ├── __init__.py
-│   ├── __main__.py          # startup orchestration
-│   ├── config.py            # paths and configuration validation
-│   ├── environment.py       # VM checks and OS metadata
-│   ├── modules.py           # setup/fix execution and module metadata
-│   ├── scoring.py           # detector execution and scoring records
-│   ├── reports.py           # HTML and desktop artifact generation
-│   └── web.py               # Flask app and HTTP routes
-├── config.json
-├── requirements.txt
+│   ├── __main__.py               # startup orchestration and CLI flags
+│   ├── config.py                 # paths, JSON loading, and validation
+│   ├── environment.py            # VM detection and OS metadata
+│   ├── modules.py                # module discovery and script execution
+│   ├── scoring.py                # detector execution and scoring records
+│   ├── reports.py                # HTML reports and desktop artifacts
+│   └── web.py                    # Flask application and HTTP routes
 ├── templates/
-│   ├── ReadMe.html
-│   └── ScoringReport.html
+│   ├── ReadMe.html               # generated module-index template
+│   └── ScoringReport.html        # generated scoring-report template
 └── src/
-    └── <module>/
-        ├── setup.sh         # optional; only run with --apply
-        ├── fix.sh           # optional; only run with --fix
-        └── detect.sh        # optional; checked by the scoring API
+    ├── ufw/
+    │   ├── properties.json       # UFW module metadata
+    │   ├── setup.sh              # optional; only run with --apply
+    │   ├── fix.sh                # optional; only run with --fix
+    │   └── detect.sh             # optional; used by scoring
+    └── users/
+        ├── properties.json       # users module metadata
+        ├── users.json            # authorized/unauthorized account lists
+        ├── setup.sh              # optional; only run with --apply
+        ├── fix.sh                # optional; only run with --fix
+        └── detect.sh             # optional; used by scoring
 ```
+
+The tree above shows the current module layout. New vulnerability modules are added as directories under `src/`; the scripts and metadata files are module-specific and may be optional unless the module's implementation requires them.
 
 Generated at runtime in the VM:
 
@@ -98,9 +107,13 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 - Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
 - The report page refreshes periodically.
 
-## Configuration
+## JSON configuration files
 
-Edit `config.json` to select module directories:
+The repository currently contains four JSON files. Their paths and complete structures are shown below.
+
+### 1. Root `config.json`
+
+This file selects which module directories under `src/` are loaded. Its top-level value must be one JSON object containing a `vulnerabilities` array of module directory names.
 
 ```json
 {
@@ -111,9 +124,92 @@ Edit `config.json` to select module directories:
 }
 ```
 
-Names must refer to existing directories directly inside `src/`. Duplicate names and path traversal are rejected. A module's optional `properties.json` may define `name`, `points` (non-negative integer; default 1), `fix`, and `vulnerability`.
+Rules:
 
-The `src/users/users.json` file must contain exactly four arrays: `authorizedUsers`, `unauthorizedUsers`, `authorizedAdministrators`, and `unauthorizedAdministrators`. Account names must be valid Linux usernames; the protected `root` account is rejected. During `--apply`, authorized users and administrators are created if absent and all configured authorized accounts are added to the shared `users` group. Authorized administrators are also added to `sudo`. Newly created accounts are password-locked. During `--fix`, unauthorized users are removed and unauthorized administrators lose administrative group membership without account deletion. The users detector scores each unauthorized user and each unauthorized administrator as a separate 3-point issue. If an account appears in both unauthorized lists, unauthorized-user removal takes precedence.
+- Each array element must match an existing directory directly under `src/`.
+- Duplicate module names and path traversal are rejected.
+- The order of entries determines the configured module order.
+- Add a module by adding its directory under `src/` and listing its directory name here.
+
+### 2. `src/ufw/properties.json`
+
+This file provides the UFW module's display name, supported distribution labels, difficulty, score value, vulnerability description, and remediation guidance.
+
+```json
+{
+  "name": "Secure UFW (uncomplicated firewall)",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 3,
+  "vulnerability": "Misconfigured firewall can allow attackers in through backdoors.",
+  "fix": "Open terminal, run \\"sudo ufw enable\\""
+}
+```
+
+### 3. `src/users/properties.json`
+
+This file provides the users module's display name, score value, vulnerability description, and remediation guidance.
+
+```json
+{
+  "name": "Authorized Users and Administrators",
+  "points": 3,
+  "vulnerability": "Unauthorized accounts and unauthorized administrative privileges weaken system access control.",
+  "fix": "Remove every unauthorized user account. For accounts listed only as unauthorized administrators, remove membership in sudo, admin, and wheel while preserving the account."
+}
+```
+
+### 4. `src/users/users.json`
+
+This file defines four arrays of Linux account names. All four keys are required:
+
+- `authorizedUsers`: accounts that should exist and belong to the shared `users` group.
+- `unauthorizedUsers`: accounts that should be removed by `--fix`.
+- `authorizedAdministrators`: accounts that should exist, belong to `users`, and have `sudo` privileges.
+- `unauthorizedAdministrators`: existing accounts that should lose administrative privileges but remain present.
+
+Current file structure:
+
+```json
+{
+  "authorizedUsers": [
+    "bob",
+    "alice",
+    "jane",
+    "tom"
+  ],
+  "unauthorizedUsers": [
+    "jack",
+    "tina"
+  ],
+  "authorizedAdministrators": [
+    "bob",
+    "jane"
+  ],
+  "unauthorizedAdministrators": [
+    "alice"
+  ]
+}
+```
+
+Account names must be valid Linux usernames; the protected `root` account is rejected. If a name appears in both unauthorized arrays, the unauthorized-user rule takes precedence: the account is removed rather than merely demoted. The detector and scoring logic count each distinct unauthorized finding once, at 3 points per finding.
+
+### Module `properties.json` fields
+
+The module loader reads `properties.json` from each configured module directory. The current files demonstrate that the metadata fields can differ by module. The fields used by the application are:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `name` | string | Human-readable module name |
+| `points` | non-negative integer | Points assigned to the module; defaults to 1 when omitted |
+| `vulnerability` | string | Description of the issue being checked |
+| `fix` | string | Human-readable remediation guidance |
+
+The UFW metadata also contains `distributions` (an array of strings) and `difficulty` (an integer). These are present in the current UFW file; they are not present in the current users file. Do not assume every module defines identical optional metadata.
 
 ## Module contract
 
