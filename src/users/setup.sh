@@ -114,11 +114,11 @@ done
 
 # Apply the deny lists too: remove unauthorized accounts and demote
 # unauthorized administrators, while preserving the precedence rule.
-if [[ ! -x "$FIX_SCRIPT" ]]; then
-    printf 'users: required remediation script is missing or not executable: %s\n' "$FIX_SCRIPT" >&2
+if [[ ! -f "$FIX_SCRIPT" ]]; then
+    printf 'users: required remediation script is missing: %s\n' "$FIX_SCRIPT" >&2
     exit 1
 fi
-"$FIX_SCRIPT"
+/bin/bash "$FIX_SCRIPT"
 
 # Verify the requested account policy after remediation.
 for username in "${!AUTH_USERS[@]}" "${!AUTH_ADMINS[@]}"; do
