@@ -3,7 +3,7 @@ set -euo pipefail
 
 USERS_FILE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/users.json"
 if [[ ! -r "$USERS_FILE" ]]; then
-    printf 'users: cannot read %s\\n' "$USERS_FILE" >&2
+    printf 'users: cannot read %s\n' "$USERS_FILE" >&2
     exit 2
 fi
 
@@ -86,7 +86,7 @@ for username in "${!UNAUTH_ADMINS[@]}"; do
     done
 
     for group in sudo admin wheel; do
-        if id -nG "$username" 2>/dev/null | tr ' ' '\\n' | grep -Fxq "$group"; then
+        if id -nG "$username" 2>/dev/null | tr ' ' '\n' | grep -Fxq "$group"; then
             run_privileged gpasswd --delete "$username" "$group"
         fi
     done
