@@ -537,6 +537,8 @@ def main() -> int:
         modules = load_config()
         for name in modules:
             module_directory(name)
+        if "users" in modules:
+            load_user_lists()
         if args.apply:
             apply_setups(modules)
         else:
