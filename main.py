@@ -138,7 +138,7 @@ def load_user_lists() -> dict[str, list[str]]:
     }
     if not isinstance(data, dict) or set(data) != keys:
         raise CpSimError(f"{path} must contain exactly: {', '.join(sorted(keys))}.")
-    username_pattern = re.compile(r"^[a-z_][a-z0-9_-]*[$]?$")
+    username_pattern = re.compile(r"^(?!root$)[a-z_][a-z0-9_-]*[$]?$")
     result: dict[str, list[str]] = {}
     for key in keys:
         values = data[key]
