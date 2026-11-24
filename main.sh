@@ -83,14 +83,15 @@ fi
 
 # Validate project configuration before creating the virtual environment.
 python3 - <<'PY'
-from cp_sim.config import load_config, load_user_lists
+import sys
+from cp_sim.config import CpSimError, load_config, load_user_lists
 
 try:
     modules = load_config()
     if "users" in modules:
         load_user_lists()
-except Exception as exc:
-    print(f"cp-sim: invalid project configuration: {exc}", file=__import__("sys").stderr)
+except (CpSimError, OSError) as exc:
+    print(f"cp-sim: invalid project configuration: {exc}", file=sys.stderr)
     raise SystemExit(1)
 PY
 
