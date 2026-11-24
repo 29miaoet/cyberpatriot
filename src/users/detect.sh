@@ -3,7 +3,7 @@ set -euo pipefail
 
 USERS_FILE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/users.json"
 if [[ ! -r "$USERS_FILE" ]]; then
-    printf 'users: cannot read %s\\n' "$USERS_FILE" >&2
+    printf 'users: cannot read %s\n' "$USERS_FILE" >&2
     exit 2
 fi
 
@@ -65,7 +65,7 @@ findings=0
 
 for username in "${!UNAUTH_USERS[@]}"; do
     if getent passwd "$username" >/dev/null; then
-        printf 'UNAUTHORIZED_USER:%s\\n' "$username"
+        printf 'UNAUTHORIZED_USER:%s\n' "$username"
         findings=1
     fi
 done
@@ -74,7 +74,7 @@ for username in "${!UNAUTH_ADMINS[@]}"; do
     # User removal takes precedence over administrator demotion.
     [[ -n "${UNAUTH_USERS[$username]:-}" ]] && continue
     if getent passwd "$username" >/dev/null && is_admin "$username"; then
-        printf 'UNAUTHORIZED_ADMIN:%s\\n' "$username"
+        printf 'UNAUTHORIZED_ADMIN:%s\n' "$username"
         findings=1
     fi
 done
