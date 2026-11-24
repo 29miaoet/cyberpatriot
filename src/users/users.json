@@ -1,0 +1,6 @@
+{
+  "authorizedUsers": ["bob", "alice", "jane", "tom"],
+  "unauthorizedUsers": ["jack", "tina"],
+  "authorizedAdministrators": ["bob", "jane"],
+  "unauthorizedAdministrators": ["alice"]
+}

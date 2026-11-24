@@ -1,5 +1,3 @@
 {
-  "vulnerabilities": [
-    "ufw"
-  ]
+  "vulnerabilities": ["ufw", "users"]
 }
