@@ -6,36 +6,42 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 
 ## Project specifications
 
-1. **Target environment:** Debian/Ubuntu-based Linux virtual machines, including Ubuntu, Debian, and Linux Mint. The VM check is heuristic and may not recognize every hypervisor configuration.
-2. **Project structure:** Each vulnerability is represented by a subdirectory under `src/` (for example, `src/ufw/`).
-3. **Configuration:** The root `config.json` is one JSON object with a single `vulnerabilities` array. Each array element is the name of a directory directly under `src/`.
-4. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`. The users module creates configured authorized accounts and grants the `sudo` group only to authorized administrators. Newly created accounts have locked passwords and require a separate password policy before interactive login.
-5. **Detection scripts:** A module may contain `detect.sh`. It returns:
-   - `0`: the check is fixed;
-   - `1`: the check remains unresolved;
-   - any other exit status: detector error.
-6. **Module index:** At startup, populate `templates/ReadMe.html` with the detected distribution name and project title, then generate `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
-7. **Scoring report:** `templates/ScoringReport.html` is populated at startup using detector results and module metadata, then written to the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, defaulting to 1). Unresolved checks are omitted from the fixed-issue list; detector errors affect the overall status. Penalties, remote links, and internet connectivity are not currently scored; the report displays zero penalties, no remote links, and an explicit “Not checked” connectivity status.
-8. **Desktop shortcut:** At startup, generate `~/Desktop/Scoring Report.desktop`. It is a small launcher that runs `xdg-open http://127.0.0.1:5000/` in the default browser; it does not start or manage the Flask service. Start the service separately with `./main.sh`. Some desktop environments require choosing **Allow Launching** or **Trust and Launch** once for a newly generated `.desktop` file.
-9. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
-10. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
+1. **Target environment:** Debian/Ubuntu-based Linux virtual machines, including Ubuntu, Debian, and Linux Mint.
+2. **Single entry point:** `main.sh` is the only supported entry point. It checks the VM environment, installs missing system dependencies, creates the project virtual environment, installs Python requirements, and starts the application.
+3. **Application structure:** Python application code is organized in the `cp_sim/` package by responsibility. `cp_sim/__main__.py` coordinates startup; it is not intended to be invoked directly.
+4. **Project modules:** Each vulnerability is represented by a subdirectory under `src/` (for example, `src/ufw/`).
+5. **Configuration:** The root `config.json` is one JSON object with a single `vulnerabilities` array. Each element is the name of a directory directly under `src/`.
+6. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`. The users module creates configured authorized accounts and grants the `sudo` group only to authorized administrators. Newly created accounts have locked passwords.
+7. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when the check is fixed, `1` when unresolved, and any other status for detector errors.
+8. **Module index:** At startup, populate `templates/ReadMe.html` with detected distribution information and write `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
+9. **Scoring report:** Populate `templates/ScoringReport.html` at startup and on each report request, then write the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, default 1). The users module scores each distinct unauthorized user/admin finding at 3 points, with unauthorized-user removal taking precedence.
+10. **Desktop shortcut:** Generate `~/Desktop/Scoring Report.desktop`. It opens `http://127.0.0.1:5000/` in the default browser; it does not start or manage Flask.
+11. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
+12. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
 
 ## Repository layout
 
 ```text
 .
-├── main.py
-├── main.sh
+├── main.sh                  # sole entry point
+├── cp_sim/
+│   ├── __init__.py
+│   ├── __main__.py          # startup orchestration
+│   ├── config.py            # paths and configuration validation
+│   ├── environment.py       # VM checks and OS metadata
+│   ├── modules.py           # setup execution and module metadata
+│   ├── scoring.py           # detector execution and scoring records
+│   ├── reports.py           # HTML and desktop artifact generation
+│   └── web.py               # Flask app and HTTP routes
 ├── config.json
 ├── requirements.txt
-├── README.md
 ├── templates/
 │   ├── ReadMe.html
 │   └── ScoringReport.html
 └── src/
     └── <module>/
-        ├── setup.sh          # optional; only run with --apply
-        └── detect.sh         # optional; checked by the scoring API
+        ├── setup.sh         # optional; only run with --apply
+        └── detect.sh        # optional; checked by the scoring API
 ```
 
 Generated at runtime in the VM:
@@ -53,15 +59,15 @@ chmod +x main.sh
 ./main.sh
 ```
 
-The installer:
+The launcher:
 
 1. Checks that it is running inside a detected VM before making system changes.
 2. Installs `python3`, `python3-venv`, and `python3-pip` with APT if they are missing.
 3. Creates the project-local `.venv/` virtual environment.
-4. Installs the Python packages listed in `requirements.txt`.
+4. Installs the packages listed in `requirements.txt`.
 5. Starts cp-sim in read-only mode by default.
 
-The script uses `sudo` when not run as root. Internet access and permission to install APT packages are required on the first run. Subsequent runs reuse the virtual environment and do not reinstall already-present system packages. Optional report values can be set with `CP_SIM_TEAM_ID`, `CP_SIM_TITLE`, `CP_SIM_REPORT_TITLE`, and `CP_SIM_LINUX_ROOT_POLICY` environment variables.
+The script uses `sudo` when not run as root. Internet access and permission to install APT packages are required on the first run. Subsequent runs reuse the virtual environment. Optional report values can be set with `CP_SIM_TEAM_ID`, `CP_SIM_TITLE`, `CP_SIM_REPORT_TITLE`, and `CP_SIM_LINUX_ROOT_POLICY` environment variables.
 
 To explicitly apply configured setup scripts before starting the service:
 
@@ -73,11 +79,11 @@ Do not use `--apply` on a host machine or a VM containing data you need to prese
 
 ## Using the scoring report
 
-- The installer starts the service and prints its local URL: [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
-- Alternatively, double-click **Scoring Report** on the VM desktop to open the report in the default browser. The Flask service must already be running.
-- Start the service separately with `./main.sh`; keep its terminal window open while viewing the report. Closing it stops the service.
-- Do not open the generated `Scoring Report.html` directly as a local file. It must be served by Flask; each page load regenerates the report from current detector results, and the template refreshes the page every 60 seconds.
-- The page refreshes detector results every five seconds.
+- The service prints its local URL: [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
+- Alternatively, double-click **Scoring Report** on the VM desktop. The Flask service must already be running.
+- Keep the terminal running while viewing the report; closing it stops the service.
+- Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
+- The report page refreshes periodically.
 
 ## Configuration
 
@@ -86,24 +92,25 @@ Edit `config.json` to select module directories:
 ```json
 {
   "vulnerabilities": [
-    "ufw"
+    "ufw",
+    "users"
   ]
 }
 ```
 
-Names must refer to existing directories directly inside `src/`. Duplicate names and path traversal are rejected. A module's optional `properties.json` may define `name`, `points` (non-negative integer; default 1), `fix`, and `vulnerability` for report labels and hints.
+Names must refer to existing directories directly inside `src/`. Duplicate names and path traversal are rejected. A module's optional `properties.json` may define `name`, `points` (non-negative integer; default 1), `fix`, and `vulnerability`.
 
-The `src/users/users.json` file must contain exactly four arrays: `authorizedUsers`, `unauthorizedUsers`, `authorizedAdministrators`, and `unauthorizedAdministrators`. Account names must be valid Linux usernames; the protected `root` account is rejected. During `--apply`, authorized users and administrators are created if absent, and authorized administrators are added to `sudo`. Newly created accounts are password-locked. The users detector treats each unauthorized user and each unauthorized administrator as a separate 3-point issue. If an account appears in both unauthorized lists, unauthorized-user removal takes precedence and it is counted once. The users module's `fix.sh` removes unauthorized users and strips administrative group membership from unauthorized administrators without deleting those latter accounts.
+The `src/users/users.json` file must contain exactly four arrays: `authorizedUsers`, `unauthorizedUsers`, `authorizedAdministrators`, and `unauthorizedAdministrators`. Account names must be valid Linux usernames; the protected `root` account is rejected. During `--apply`, authorized users and administrators are created if absent, and authorized administrators are added to `sudo`. Newly created accounts are password-locked. The users detector scores each unauthorized user and each unauthorized administrator as a separate 3-point issue. If an account appears in both unauthorized lists, unauthorized-user removal takes precedence. The users module's `fix.sh` removes unauthorized users and strips administrative group membership from unauthorized administrators without deleting those latter accounts.
 
 ## Module contract
 
 A module is selected by its directory name in `config.json`. Both scripts are optional:
 
 - `setup.sh` prepares the module's configured practice state. It may make system changes and therefore runs only under `--apply`.
-- `detect.sh` checks the relevant condition. It must use exit code `0` only when the condition is fixed, and `1` when it is not fixed. Other statuses are treated as errors.
+- `detect.sh` checks the relevant condition. It must use exit code `0` only when fixed, and `1` when unresolved. Other statuses are treated as errors.
 
 Scripts are invoked with Bash, with their module directory as the working directory. Each invocation has a 120-second timeout.
 
 ## Current implementation scope
 
-The application provides configuration parsing, VM gating, opt-in setup execution, rendered HTML templates, a desktop launcher, and the Flask scoring API. It does not install system services, daemonize itself, or provide a general-purpose repair/fix workflow. Additional vulnerability modules and their detection logic are maintained separately under `src/`.
+The application provides configuration parsing, VM gating, opt-in setup execution, rendered HTML templates, a desktop launcher, and the Flask scoring API. It does not install system services, daemonize itself, or provide a general-purpose repair workflow. Additional vulnerability modules and their detection logic are maintained separately under `src/`.
