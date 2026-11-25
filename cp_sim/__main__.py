@@ -8,7 +8,7 @@ import subprocess
 from .config import CpSimError, HOST, PORT, load_config, load_user_lists, module_directory
 from .environment import require_vm
 from .modules import apply_fixes, apply_setups
-from .reports import write_desktop_launcher, write_module_readme, write_scoring_report
+from .reports import write_answer_key, write_desktop_launcher, write_module_readme, write_scoring_report
 from .web import app
 
 logger = logging.getLogger("cp-sim")
@@ -40,6 +40,7 @@ def main() -> int:
         else:
             logger.info("Read-only startup: setup and fix scripts will not be executed.")
         write_module_readme(modules)
+        write_answer_key(modules)
         write_scoring_report()
         write_desktop_launcher()
     except (CpSimError, OSError, subprocess.SubprocessError) as exc:
