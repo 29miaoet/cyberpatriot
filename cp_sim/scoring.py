@@ -51,10 +51,10 @@ def collect_user_scores(directory: Path) -> list[dict[str, Any]]:
         return [{"name": "users", "status": "error",
                  "detail": "detector exit status did not match its findings"}]
     return [{
-        "name": "users", "message": label,
+        "name": "users", "message": message,
         "status": "unresolved" if (kind, username) in findings else "fixed",
         "points": 3, "detail": f"{kind.lower().replace('_', ' ')} remains present",
-    } for kind, username, label in expected]
+    } for kind, username, message in expected]
 
 
 def collect_scores() -> list[dict[str, Any]]:
