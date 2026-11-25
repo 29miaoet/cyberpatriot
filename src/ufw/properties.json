@@ -4,5 +4,6 @@
   "difficulty": 1,
   "points": 3,
   "vulnerability": "Misconfigured firewall can allow attackers in through backdoors.",
-  "fix": "Open terminal, run \"sudo ufw enable\""
+  "fix": "Open terminal, run \"sudo ufw enable\"",
+  "fixedMessage": "UFW (uncomplicated firewall) is enabled"
 }
