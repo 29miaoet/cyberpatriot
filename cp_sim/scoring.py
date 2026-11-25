@@ -14,9 +14,10 @@ def collect_user_scores(directory: Path) -> list[dict[str, Any]]:
     users = load_user_lists()
     unauthorized_users = set(users["unauthorizedUsers"])
     expected = (
-        [("UNAUTHORIZED_USER", name, f"Unauthorized user: {name}")
+        [("UNAUTHORIZED_USER", name, f"Removed unauthorized user {name}")
          for name in users["unauthorizedUsers"]]
-        + [("UNAUTHORIZED_ADMIN", name, f"Unauthorized administrator: {name}")
+        + [("UNAUTHORIZED_ADMIN", name,
+            f"Removed administrative privileges from unauthorized administrator {name}")
            for name in users["unauthorizedAdministrators"] if name not in unauthorized_users]
     )
     detector = directory / "detect.sh"
@@ -50,7 +51,7 @@ def collect_user_scores(directory: Path) -> list[dict[str, Any]]:
         return [{"name": "users", "status": "error",
                  "detail": "detector exit status did not match its findings"}]
     return [{
-        "name": "users", "label": label,
+        "name": "users", "message": label,
         "status": "unresolved" if (kind, username) in findings else "fixed",
         "points": 3, "detail": f"{kind.lower().replace('_', ' ')} remains present",
     } for kind, username, label in expected]
@@ -73,8 +74,7 @@ def collect_scores() -> list[dict[str, Any]]:
             checks.append({"name": name, "status": "error", "detail": "detector timed out"})
             continue
         if result.returncode == 0:
-            checks.append({"name": name, "status": "fixed",
-                           "message": f"{name.upper()} has been enabled"})
+            checks.append({"name": name, "status": "fixed"})
         elif result.returncode == 1:
             checks.append({"name": name, "status": "unresolved"})
         else:
