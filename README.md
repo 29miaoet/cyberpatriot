@@ -107,7 +107,7 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 - Keep the terminal running while viewing the report; closing it stops the service.
 - Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
 - The report automatically refreshes every 5 seconds. Each refresh reruns the read-only detectors; it does not run setup or remediation scripts.
-- The report lists only scored issues that are currently detected as unresolved; fixed issues are omitted. If no unresolved issues remain, the issues section is left empty. Vulnerability descriptions and remediation guidance are kept separately in `~/Desktop/Answer Key.md`.
+- The report lists only scored issues that have been fixed and earned points. Unresolved issues and checks that have not been fixed are omitted. If no scored issues have been fixed, the issues section is left empty. Vulnerability descriptions and remediation guidance are kept separately in `~/Desktop/Answer Key.md`.
 
 ## JSON configuration files
 
@@ -210,6 +210,7 @@ The module loader reads `properties.json` from each configured module directory.
 | `points` | non-negative integer | Points assigned to the module; defaults to 1 when omitted |
 | `vulnerability` | string | Description of the issue being checked |
 | `fix` | string | Human-readable remediation guidance |
+| `fixedMessage` | string | Optional report message displayed when the module's check is fixed |
 
 The UFW metadata also contains `distributions` (an array of strings) and `difficulty` (an integer). These are present in the current UFW file; they are not present in the current users file. Do not assume every module defines identical optional metadata.
 
