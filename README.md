@@ -107,7 +107,7 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 - Keep the terminal running while viewing the report; closing it stops the service.
 - Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
 - The report automatically refreshes every 5 seconds. Each refresh reruns the read-only detectors; it does not run setup or remediation scripts.
-- The report shows scores and aggregate status only. Vulnerability descriptions and remediation guidance are written to `~/Desktop/Answer Key.md` at startup.
+- The report lists only scored issues that are currently detected as unresolved; fixed issues are omitted. If no unresolved issues remain, the issues section is left empty. Vulnerability descriptions and remediation guidance are kept separately in `~/Desktop/Answer Key.md`.
 
 ## JSON configuration files
 
