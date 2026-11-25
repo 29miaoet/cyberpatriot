@@ -62,6 +62,7 @@ Generated at runtime in the VM:
 
 - `Scoring Report.html` in the repository root
 - `~/Desktop/README.html` — configured module index
+- `~/Desktop/Answer Key.md` — vulnerability descriptions and remediation guidance
 - `~/Desktop/Scoring Report.desktop` — report launcher
 
 ## Installation and launch
@@ -105,7 +106,8 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 - Alternatively, double-click **Scoring Report** on the VM desktop. The Flask service must already be running.
 - Keep the terminal running while viewing the report; closing it stops the service.
 - Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
-- The report page refreshes periodically.
+- The report automatically refreshes every 5 seconds. Each refresh reruns the read-only detectors; it does not run setup or remediation scripts.
+- The report shows scores and aggregate status only. Vulnerability descriptions and remediation guidance are written to `~/Desktop/Answer Key.md` at startup.
 
 ## JSON configuration files
 
