@@ -158,6 +158,18 @@ def write_scoring_report() -> None:
     fixed = [item for item in checks if item["status"] == "fixed"]
     errors = [item for item in checks if item["status"] == "error"]
     score = sum(item.get("points", metadata[item["name"]]["points"]) for item in fixed)
+    unresolved = [item for item in checks if item["status"] == "unresolved"]
+    issue_rows = (
+        Markup("<ul>\\n")
+        + Markup("\\n").join(
+            Markup("<li>{}</li>").format(
+                item.get("label", metadata[item["name"]]["name"])
+            )
+            for item in unresolved
+        )
+        + Markup("\\n</ul>")
+        if unresolved else Markup("")
+    )
     if not modules:
         overall_status, overall_color = "No modules configured", "gray"
     elif errors:
@@ -175,6 +187,7 @@ def write_scoring_report() -> None:
         "DETRACTED_POINTS": 0, "PENALTY_ROWS": Markup("None"),
         "FIXED_COUNT": len(fixed), "SCORED_VULNS": len(checks),
         "CONTRIBUTED_POINTS": f"{score:g}",
+        "ISSUES": issue_rows,
     }
     REPORT_PATH.write_text(render_template("ScoringReport.html", context), encoding="utf-8")
     logger.info("Wrote scoring report to %s.", REPORT_PATH)
