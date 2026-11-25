@@ -158,17 +158,17 @@ def write_scoring_report() -> None:
     fixed = [item for item in checks if item["status"] == "fixed"]
     errors = [item for item in checks if item["status"] == "error"]
     score = sum(item.get("points", metadata[item["name"]]["points"]) for item in fixed)
-    unresolved = [item for item in checks if item["status"] == "unresolved"]
     issue_rows = (
         Markup("<ul>")
         + Markup("").join(
             Markup("<li>{}</li>").format(
-                item.get("label", metadata[item["name"]]["name"])
+                item.get("message") or metadata[item["name"]]["fixed_message"]
+                or metadata[item["name"]]["name"]
             )
-            for item in unresolved
+            for item in fixed
         )
         + Markup("</ul>")
-        if unresolved else Markup("")
+        if fixed else Markup("")
     )
     if not modules:
         overall_status, overall_color = "No modules configured", "gray"
