@@ -38,18 +38,16 @@ for key in keys:
 PY
 )" || exit 2
 
-declare -A AUTH_USERS=() UNAUTH_USERS=() AUTH_ADMINS=() ALL_AUTH_USERS=()
+declare -A ALL_USERS=() ALL_ADMINS=()
 while IFS=: read -r key username; do
     [[ -n "${key:-}" && -n "${username:-}" ]] || continue
     case "$key" in
-        authorizedUsers)
-            AUTH_USERS["$username"]=1
-            ALL_AUTH_USERS["$username"]=1
+        authorizedUsers|unauthorizedUsers)
+            ALL_USERS["$username"]=1
             ;;
-        unauthorizedUsers) UNAUTH_USERS["$username"]=1 ;;
-        authorizedAdministrators)
-            AUTH_ADMINS["$username"]=1
-            ALL_AUTH_USERS["$username"]=1
+        authorizedAdministrators|unauthorizedAdministrators)
+            ALL_USERS["$username"]=1
+            ALL_ADMINS["$username"]=1
             ;;
     esac
 done <<< "$CONFIG"
@@ -70,16 +68,10 @@ for group in users sudo; do
     fi
 done
 
-# Create each distinct authorized account once. Administrators are also users.
-for username in "${!ALL_AUTH_USERS[@]}"; do
+# Create every configured account, including accounts intentionally marked
+# unauthorized so that the practice VM starts in the configured vulnerable state.
+for username in "${!ALL_USERS[@]}"; do
     [[ -n "$username" ]] || continue
-
-    # An explicit unauthorized-user entry takes precedence; setup does not
-    # create it, but only --fix is allowed to remove an existing account.
-    if [[ -n "${UNAUTH_USERS[$username]:-}" ]]; then
-        printf 'users: skipping creation of %s because it is unauthorized\n' "$username"
-        continue
-    fi
 
     if getent passwd "$username" >/dev/null; then
         printf 'users: account %s already exists\n' "$username"
@@ -94,7 +86,7 @@ for username in "${!ALL_AUTH_USERS[@]}"; do
         exit 1
     fi
 
-    # Keep every configured authorized account in the shared users group.
+    # All configured accounts belong to the shared users group.
     if id -nG "$username" | tr ' ' '\n' | grep -Fxq users; then
         printf 'users: %s already belongs to users\n' "$username"
     else
@@ -103,10 +95,10 @@ for username in "${!ALL_AUTH_USERS[@]}"; do
     fi
 done
 
-# Grant sudo only to configured authorized administrators.
-for username in "${!AUTH_ADMINS[@]}"; do
+# Both authorized and unauthorized administrators receive sudo membership.
+# The latter deliberately creates the vulnerable state detected by detect.sh.
+for username in "${!ALL_ADMINS[@]}"; do
     [[ -n "$username" ]] || continue
-    [[ -n "${UNAUTH_USERS[$username]:-}" ]] && continue
 
     if ! getent passwd "$username" >/dev/null; then
         printf 'users: cannot grant administrator privileges; account %s is missing\n' "$username" >&2
@@ -121,27 +113,25 @@ for username in "${!AUTH_ADMINS[@]}"; do
 done
 
 # Verify setup responsibilities only. Deny-list remediation belongs to --fix.
-for username in "${!ALL_AUTH_USERS[@]}"; do
+for username in "${!ALL_USERS[@]}"; do
     [[ -n "$username" ]] || continue
-    [[ -n "${UNAUTH_USERS[$username]:-}" ]] && continue
 
     if ! getent passwd "$username" >/dev/null; then
-        printf 'users: authorized account %s is missing after setup\n' "$username" >&2
+        printf 'users: configured account %s is missing after setup\n' "$username" >&2
         exit 1
     fi
     if ! id -nG "$username" | tr ' ' '\n' | grep -Fxq users; then
-        printf 'users: authorized account %s lacks users group membership\n' "$username" >&2
+        printf 'users: configured account %s lacks users group membership\n' "$username" >&2
         exit 1
     fi
 done
 
-for username in "${!AUTH_ADMINS[@]}"; do
+for username in "${!ALL_ADMINS[@]}"; do
     [[ -n "$username" ]] || continue
-    [[ -n "${UNAUTH_USERS[$username]:-}" ]] && continue
     if ! id -nG "$username" | tr ' ' '\n' | grep -Fxq sudo; then
-        printf 'users: authorized administrator %s lacks sudo membership\n' "$username" >&2
+        printf 'users: configured administrator %s lacks sudo membership\n' "$username" >&2
         exit 1
     fi
 done
 
-printf 'users: authorized account setup completed successfully\n'
+printf 'users: configured account setup completed successfully\n'

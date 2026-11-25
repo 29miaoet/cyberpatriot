@@ -11,6 +11,7 @@ SOURCE_DIR = ROOT / "src"
 CONFIG_PATH = ROOT / "config.json"
 REPORT_PATH = ROOT / "Scoring Report.html"
 DESKTOP_README_PATH = Path.home() / "Desktop" / "README.html"
+ANSWER_KEY_PATH = Path.home() / "Desktop" / "Answer Key.md"
 HOST = "127.0.0.1"
 PORT = 5000
 SCRIPT_TIMEOUT_SECONDS = 120

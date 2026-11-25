@@ -13,7 +13,7 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 5. **Configuration:** The root `config.json` selects module directories through a `vulnerabilities` array. Each entry is the name of a directory directly under `src/`.
 6. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`. They prepare the configured practice state and do not run remediation scripts.
 7. **Fix scripts:** A module may contain `fix.sh`. Fix scripts execute only when the user explicitly supplies `--fix`. They remediate the configured practice state. `--apply` and `--fix` are mutually exclusive.
-8. **User setup policy:** The users module's `setup.sh` creates configured authorized accounts, adds them to the shared `users` group, and grants the `sudo` group only to authorized administrators. Newly created accounts have locked passwords. It does not remove or demote accounts on the deny lists.
+8. **User setup policy:** The users module's `setup.sh` creates every account listed in all four arrays in `src/users/users.json`, adds every configured account to the shared `users` group, and grants `sudo` membership to both authorized and unauthorized administrators to establish the configured practice state. Newly created accounts have locked passwords. Setup does not remove or demote accounts; remediation is exclusive to `--fix`.
 9. **User remediation policy:** The users module's `fix.sh` removes unauthorized users and strips administrative group membership from unauthorized administrators without deleting those latter accounts. If an account appears in both unauthorized lists, unauthorized-user removal takes precedence.
 10. **Generated README account lists:** When the users module is enabled, the generated desktop README displays the parsed `authorizedUsers` and `authorizedAdministrators` arrays from `src/users/users.json`.
 11. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when the check is fixed, `1` when unresolved, and any other status for detector errors.
@@ -62,6 +62,7 @@ Generated at runtime in the VM:
 
 - `Scoring Report.html` in the repository root
 - `~/Desktop/README.html` — configured module index
+- `~/Desktop/Answer Key.md` — vulnerability descriptions and remediation guidance
 - `~/Desktop/Scoring Report.desktop` — report launcher
 
 ## Installation and launch
@@ -105,7 +106,8 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 - Alternatively, double-click **Scoring Report** on the VM desktop. The Flask service must already be running.
 - Keep the terminal running while viewing the report; closing it stops the service.
 - Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
-- The report page refreshes periodically.
+- The report automatically refreshes every 5 seconds. Each refresh reruns the read-only detectors; it does not run setup or remediation scripts.
+- The report shows scores and aggregate status only. Vulnerability descriptions and remediation guidance are written to `~/Desktop/Answer Key.md` at startup.
 
 ## JSON configuration files
 
@@ -168,9 +170,9 @@ This file provides the users module's display name, score value, vulnerability d
 This file defines four arrays of Linux account names. All four keys are required:
 
 - `authorizedUsers`: accounts that should exist and belong to the shared `users` group.
-- `unauthorizedUsers`: accounts that should be removed by `--fix`.
+- `unauthorizedUsers`: accounts that should exist in the vulnerable practice state and be removed by `--fix`.
 - `authorizedAdministrators`: accounts that should exist, belong to `users`, and have `sudo` privileges.
-- `unauthorizedAdministrators`: existing accounts that should lose administrative privileges but remain present.
+- `unauthorizedAdministrators`: accounts that should exist and initially have `sudo` privileges in the vulnerable practice state; `--fix` removes their administrative group membership but preserves the accounts.
 
 Current file structure:
 
