@@ -160,14 +160,14 @@ def write_scoring_report() -> None:
     score = sum(item.get("points", metadata[item["name"]]["points"]) for item in fixed)
     unresolved = [item for item in checks if item["status"] == "unresolved"]
     issue_rows = (
-        Markup("<ul>\\n")
-        + Markup("\\n").join(
+        Markup("<ul>")
+        + Markup("").join(
             Markup("<li>{}</li>").format(
                 item.get("label", metadata[item["name"]]["name"])
             )
             for item in unresolved
         )
-        + Markup("\\n</ul>")
+        + Markup("</ul>")
         if unresolved else Markup("")
     )
     if not modules:
