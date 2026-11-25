@@ -77,4 +77,8 @@ def load_module_properties(name: str) -> dict[str, Any]:
         display_name = name.replace("_", " ").replace("-", " ").title()
     fix = data.get("fix") if isinstance(data.get("fix"), str) else ""
     vulnerability = data.get("vulnerability") if isinstance(data.get("vulnerability"), str) else ""
-    return {"name": display_name, "points": points, "fix": fix, "vulnerability": vulnerability}
+    fixed_message = data.get("fixedMessage") if isinstance(data.get("fixedMessage"), str) else ""
+    return {
+        "name": display_name, "points": points, "fix": fix,
+        "vulnerability": vulnerability, "fixed_message": fixed_message,
+    }
