@@ -158,7 +158,7 @@ def write_scoring_report() -> None:
     fixed = [item for item in checks if item["status"] == "fixed"]
     errors = [item for item in checks if item["status"] == "error"]
     score = sum(item.get("points", metadata[item["name"]]["points"]) for item in fixed)
-    issue_rows = Markup("<br>\\n").join(
+    issue_rows = Markup("<br>").join(
         Markup("{}").format(
             item.get("message") or metadata[item["name"]]["fixed_message"]
             or metadata[item["name"]]["name"]
