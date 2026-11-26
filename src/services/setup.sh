@@ -9,7 +9,7 @@ if [[ ! -r "$CONFIG_FILE" ]]; then
     exit 2
 fi
 
-mapfile -t SERVICES < <(python3 - "$CONFIG_FILE" <<'PY'
+CONFIG="$(python3 - "$CONFIG_FILE" <<'PY'
 import json
 import sys
 
@@ -36,7 +36,11 @@ for key in keys:
     for value in values:
         print(value)
 PY
-) || exit 2
+)" || exit 2
+SERVICES=()
+if [[ -n "$CONFIG" ]]; then
+    mapfile -t SERVICES <<< "$CONFIG"
+fi
 
 declare -A PACKAGES=([ssh]=openssh-server [vsftpd]=vsftpd [postfix]=postfix [apache2]=apache2)
 declare -A UNITS=([ssh]=ssh.service [vsftpd]=vsftpd.service [postfix]=postfix.service [apache2]=apache2.service)
@@ -45,7 +49,7 @@ run_privileged() {
     if [[ "$EUID" -eq 0 ]]; then "$@"; else sudo "$@"; fi
 }
 
-if (("${#SERVICES[@]}" == 0)); then
+if ((${#SERVICES[@]} == 0)); then
     printf 'services: no services configured; nothing to install\n'
     exit 0
 fi
