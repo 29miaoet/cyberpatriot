@@ -112,7 +112,7 @@ To explicitly run module remediation scripts:
 
 The two flags are mutually exclusive. Without either flag, neither setup nor fix scripts are executed.
 
-Do not use `--apply` or `--fix` on a host machine or a VM containing data you need to preserve. For the current UFW module, `--apply` disables UFW and `--fix` enables it.
+Do not use `--apply` or `--fix` on a host machine or a VM containing data you need to preserve. For the current UFW module, `--apply` disables UFW and `--fix` enables it. The services module starts every configured service during `--apply`, including unauthorized network services such as Postfix and Apache. Run the practice VM on an isolated virtual network; do not expose these services to a public network or a trusted LAN.
 
 ## Using the scoring report
 
