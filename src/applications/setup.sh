@@ -43,7 +43,7 @@ if [[ -n "$CONFIG" ]]; then
     mapfile -t PACKAGES <<< "$CONFIG"
 fi
 
-if (("${#PACKAGES[@]}" == 0)); then
+if ((${#PACKAGES[@]} == 0)); then
     printf 'applications: no packages configured; nothing to install\n'
     exit 0
 fi
