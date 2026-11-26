@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MODULE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="$MODULE_DIR/services.json"
+
+if [[ ! -r "$CONFIG_FILE" ]]; then
+    printf 'services: cannot read %s\n' "$CONFIG_FILE" >&2
+    exit 2
+fi
+
+mapfile -t SERVICES < <(python3 - "$CONFIG_FILE" <<'PY'
+import json
+import sys
+
+keys = ("authorizedServices", "unauthorizedServices")
+try:
+    with open(sys.argv[1], encoding="utf-8") as stream:
+        data = json.load(stream)
+except (OSError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"services: invalid services.json: {exc}")
+if not isinstance(data, dict) or set(data) != set(keys):
+    raise SystemExit("services: services.json must contain exactly the two required arrays")
+allowed = {"ssh", "vsftpd", "postfix", "apache2"}
+seen = set()
+for key in keys:
+    values = data[key]
+    if not isinstance(values, list) or any(not isinstance(x, str) or x not in allowed for x in values):
+        raise SystemExit(f"services: {key} contains an unsupported service; supported values: {', '.join(sorted(allowed))}")
+    if len(values) != len(set(values)):
+        raise SystemExit(f"services: {key} contains duplicate service names")
+    overlap = seen.intersection(values)
+    if overlap:
+        raise SystemExit(f"services: service appears in both policy lists: {sorted(overlap)}")
+    seen.update(values)
+    for value in values:
+        print(value)
+PY
+) || exit 2
+
+declare -A PACKAGES=([ssh]=openssh-server [vsftpd]=vsftpd [postfix]=postfix [apache2]=apache2)
+declare -A UNITS=([ssh]=ssh.service [vsftpd]=vsftpd.service [postfix]=postfix.service [apache2]=apache2.service)
+
+run_privileged() {
+    if [[ "$EUID" -eq 0 ]]; then "$@"; else sudo "$@"; fi
+}
+
+if (("${#SERVICES[@]}" == 0)); then
+    printf 'services: no services configured; nothing to install\n'
+    exit 0
+fi
+
+packages=()
+for service in "${SERVICES[@]}"; do
+    packages+=("${PACKAGES[$service]}")
+done
+
+export DEBIAN_FRONTEND=noninteractive
+run_privileged apt-get update
+run_privileged apt-get install --yes --no-install-recommends -- "${packages[@]}"
+
+for service in "${SERVICES[@]}"; do
+    unit="${UNITS[$service]}"
+    run_privileged systemctl enable --now "$unit"
+    if ! systemctl is-active --quiet "$unit"; then
+        printf 'services: service failed to become active: %s\n' "$unit" >&2
+        exit 1
+    fi
+    printf 'services: enabled and started %s\n' "$service"
+done
+
+printf 'services: configured practice services started successfully\n'
