@@ -79,32 +79,47 @@ def write_module_readme(modules: list[str]) -> None:
     else:
         authorized_users = Markup("<p>Not configured.</p>")
         authorized_administrators = Markup("<p>Not configured.</p>")
+    if "applications" in modules:
+        applications_path = ROOT / "src" / "applications" / "applications.json"
+        try:
+            application_config = json.loads(
+                applications_path.read_text(encoding="utf-8")
+            )
+            authorized_applications = application_config["authorizedApplications"]
+            if not isinstance(authorized_applications, list) or not all(
+                isinstance(item, str) for item in authorized_applications
+            ):
+                raise ValueError("authorizedApplications must be an array of strings")
+        except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+            raise CpSimError(
+                f"Invalid application configuration in {applications_path}: {exc}"
+            ) from exc
+        authorized_applications_html = render_account_list(authorized_applications)
+    else:
+        authorized_applications_html = Markup("<p>Not configured.</p>")
+
     if "services" in modules:
         services_path = ROOT / "src" / "services" / "services.json"
         try:
             service_config = json.loads(services_path.read_text(encoding="utf-8"))
             authorized_services = service_config["authorizedServices"]
-            unauthorized_services = service_config["unauthorizedServices"]
-            if not all(
-                isinstance(items, list) and all(isinstance(item, str) for item in items)
-                for items in (authorized_services, unauthorized_services)
+            if not isinstance(authorized_services, list) or not all(
+                isinstance(item, str) for item in authorized_services
             ):
-                raise ValueError("service lists must be arrays of strings")
+                raise ValueError("authorizedServices must be an array of strings")
         except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
             raise CpSimError(f"Invalid service configuration in {services_path}: {exc}") from exc
         authorized_services_html = render_service_list(authorized_services)
-        unauthorized_services_html = render_service_list(unauthorized_services)
     else:
         authorized_services_html = Markup("<p>Not configured.</p>")
-        unauthorized_services_html = Markup("<p>Not configured.</p>")
 
     document = render_template("ReadMe.html", {
         "OS": os_details["pretty_name"], "TITLE": title,
         "LINUX_ROOT_POLICY": root_policy, "USER_README_HTML": user_readme_html,
         "AUTHORIZED_USERS": authorized_users,
         "AUTHORIZED_ADMINISTRATORS": authorized_administrators,
+        "AUTHORIZED_APPLICATIONS": authorized_applications_html,
         "AUTHORIZED_SERVICES": authorized_services_html,
-        "UNAUTHORIZED_SERVICES": unauthorized_services_html,
     })
     DESKTOP_README_PATH.write_text(document, encoding="utf-8")
     for asset_name in ("background.jpg", "logo.svg"):
