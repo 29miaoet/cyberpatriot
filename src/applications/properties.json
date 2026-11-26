@@ -1,0 +1,6 @@
+{
+  "name": "Authorized and Unauthorized Applications",
+  "points": 3,
+  "vulnerability": "Unapproved software increases the attack surface and may violate system-use policy.",
+  "fix": "Remove every installed application listed in unauthorizedApplications while preserving authorized applications."
+}
