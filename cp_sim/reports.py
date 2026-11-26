@@ -1,6 +1,7 @@
 """HTML report and desktop artifact generation."""
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import datetime
@@ -124,6 +125,47 @@ def write_answer_key(modules: list[str]) -> None:
                 lines.extend(["No unauthorized account checks are configured.", ""])
             continue
 
+
+        if name in {"applications", "services"}:
+            config_filename = f"{name}.json"
+            list_key = (
+                "unauthorizedApplications" if name == "applications"
+                else "unauthorizedServices"
+            )
+            try:
+                module_config = json.loads(
+                    (ROOT / "src" / name / config_filename).read_text(encoding="utf-8")
+                )
+                unauthorized_items = module_config.get(list_key, [])
+                if not isinstance(unauthorized_items, list):
+                    unauthorized_items = []
+            except (OSError, json.JSONDecodeError, AttributeError):
+                unauthorized_items = []
+            lines.extend([
+                f"## {metadata['name']}",
+                "",
+                f"**Issue:** {metadata['vulnerability'] or 'No issue description configured.'}",
+                "",
+            ])
+            for item in unauthorized_items:
+                if name == "applications":
+                    heading = f"Unauthorized application: `{item}`"
+                    description = "The package is expected to be installed in the vulnerable practice state. Remediation removes the package."
+                else:
+                    heading = f"Unauthorized service: `{item}`"
+                    description = "The service is expected to be enabled and running in the vulnerable practice state. Remediation stops and disables it but leaves the package installed."
+                lines.extend([
+                    f"### {heading}",
+                    "",
+                    description,
+                    "",
+                    f"**Remediation:** {metadata['fix'] or 'No remediation guidance configured.'}",
+                    "",
+                ])
+            if not unauthorized_items:
+                lines.extend(["No unauthorized entries are configured.", ""])
+            continue
+
         lines.extend([
             f"## {metadata['name']}",
             "",
@@ -147,13 +189,32 @@ def write_scoring_report() -> None:
     checks = collect_scores()
     metadata = {name: load_module_properties(name) for name in modules}
     user_lists = load_user_lists() if "users" in modules else None
+    def configured_finding_count(name: str) -> int:
+        if name == "users" and user_lists is not None:
+            return (
+                len(user_lists["unauthorizedUsers"])
+                + len(set(user_lists["unauthorizedAdministrators"])
+                      - set(user_lists["unauthorizedUsers"]))
+            )
+        policy_files = {
+            "applications": ("applications.json", "unauthorizedApplications"),
+            "services": ("services.json", "unauthorizedServices"),
+        }
+        if name in policy_files:
+            filename, key = policy_files[name]
+            try:
+                data = json.loads(
+                    (ROOT / "src" / name / filename).read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError):
+                return 0
+            values = data.get(key, []) if isinstance(data, dict) else []
+            return len(values) if isinstance(values, list) else 0
+        return 1
+
     total_points = sum(
-        metadata[name]["points"] * (
-            len(user_lists["unauthorizedUsers"])
-            + len(set(user_lists["unauthorizedAdministrators"])
-                  - set(user_lists["unauthorizedUsers"]))
-            if name == "users" and user_lists is not None else 1
-        ) for name in modules
+        metadata[name]["points"] * configured_finding_count(name)
+        for name in modules
     )
     fixed = [item for item in checks if item["status"] == "fixed"]
     errors = [item for item in checks if item["status"] == "error"]
