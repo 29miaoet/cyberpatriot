@@ -5,7 +5,7 @@ import logging
 import subprocess
 from datetime import datetime, timezone
 
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_file, send_from_directory
 
 from .config import HOST, PORT, REPORT_PATH, ROOT, CpSimError
 from .scoring import collect_scores
@@ -26,6 +26,18 @@ def scoring_report():
     response = send_file(REPORT_PATH, max_age=0)
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+@app.get("/background.jpg")
+def background_image():
+    """Serve the README background image from the templates directory."""
+    return send_from_directory(ROOT / "templates", "background.jpg", max_age=3600)
+
+
+@app.get("/logo.svg")
+def logo_image():
+    """Serve the README logo from the templates directory."""
+    return send_from_directory(ROOT / "templates", "logo.svg", max_age=3600)
 
 
 @app.get("/api/scores")
