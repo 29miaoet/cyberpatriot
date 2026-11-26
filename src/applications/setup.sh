@@ -9,7 +9,7 @@ if [[ ! -r "$CONFIG_FILE" ]]; then
     exit 2
 fi
 
-mapfile -t PACKAGES < <(python3 - "$CONFIG_FILE" <<'PY'
+CONFIG="$(python3 - "$CONFIG_FILE" <<'PY'
 import json
 import re
 import sys
@@ -37,7 +37,11 @@ for key in keys:
     for value in values:
         print(value)
 PY
-) || exit 2
+)" || exit 2
+PACKAGES=()
+if [[ -n "$CONFIG" ]]; then
+    mapfile -t PACKAGES <<< "$CONFIG"
+fi
 
 if (("${#PACKAGES[@]}" == 0)); then
     printf 'applications: no packages configured; nothing to install\n'
