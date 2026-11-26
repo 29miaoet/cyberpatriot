@@ -224,7 +224,7 @@ This file contains exactly two arrays of Debian package names:
 }
 ```
 
-These values are APT package names, not display names or executable paths. The setup script installs all listed packages, including unauthorized ones, so that the detector can identify them. The fix script runs APT removal only for unauthorized packages; it does not purge package configuration or automatically remove dependencies. A package must be available from the VM's configured APT repositories for setup to succeed.
+These values are APT package names, not display names or executable paths. The setup script installs all listed packages, including unauthorized ones, so that the detector can identify them. The fix script runs APT removal only for unauthorized packages; it does not purge package configuration or automatically remove dependencies. A package must be available from the VM's configured APT repositories for setup to succeed. In particular, `ophcrack` is in Ubuntu's `universe` component, while `zangband` is in Ubuntu's `multiverse` component and Debian's `non-free` component. Ensure the relevant component is already enabled in the VM, or remove that package from the configured list before running `--apply`.
 
 ### 7. `src/services/properties.json`
 
