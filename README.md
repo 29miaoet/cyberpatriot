@@ -21,9 +21,9 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 13. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when all its checks are fixed, `1` when one or more findings remain, and any other status for detector errors.
 14. **Module index:** At startup, populate `templates/ReadMe.html` with detected distribution information and write `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
 15. **Scoring report:** Populate `templates/ScoringReport.html` at startup and on each report request, then write the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, default 1). Users, applications, and services score each distinct unauthorized entry at 3 points.
-14. **Desktop shortcut:** Generate `~/Desktop/Scoring Report.desktop`. It opens `http://127.0.0.1:5000/` in the default browser; it does not start or manage Flask.
-15. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
-16. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
+16. **Desktop shortcut:** Generate `~/Desktop/Scoring Report.desktop`. It opens `http://127.0.0.1:5000/` in the default browser; it does not start or manage Flask.
+17. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
+18. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
 
 ## Repository structure
 
@@ -157,7 +157,7 @@ Every entry must match an existing directory directly under `src/`. Duplicate na
   "difficulty": 1,
   "points": 3,
   "vulnerability": "Misconfigured firewall can allow attackers in through backdoors.",
-  "fix": "Open terminal, run \\"sudo ufw enable\\"",
+  "fix": "Open terminal, run \"sudo ufw enable\"",
   "fixedMessage": "UFW (uncomplicated firewall) is enabled"
 }
 ```
