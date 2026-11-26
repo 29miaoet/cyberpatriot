@@ -1,0 +1,10 @@
+{
+  "authorizedServices": [
+    "ssh",
+    "vsftpd"
+  ],
+  "unauthorizedServices": [
+    "postfix",
+    "apache2"
+  ]
+}
