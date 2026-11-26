@@ -1,0 +1,13 @@
+{
+  "name": "TCP SYN Cookies",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "IPv4 TCP SYN cookies are disabled, reducing the kernel's fallback protection when a SYN backlog overflows.",
+  "fix": "Set net.ipv4.tcp_syncookies=1 persistently and apply the setting with sysctl.",
+  "fixedMessage": "TCP SYN Cookies is configured correctly"
+}

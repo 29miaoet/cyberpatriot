@@ -1,0 +1,13 @@
+{
+  "name": "Password History",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "PAM does not retain the previous three passwords, allowing immediate password reuse.",
+  "fix": "Configure pam_pwhistory.so remember=3 use_authtok in the password stack before pam_unix.so.",
+  "fixedMessage": "Password History is configured correctly"
+}

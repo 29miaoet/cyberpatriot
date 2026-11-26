@@ -1,0 +1,13 @@
+{
+  "name": "GRUB Configuration Permissions",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "The GRUB configuration file is more permissive than the requested 0600 mode.",
+  "fix": "Set /boot/grub/grub.cfg to mode 0600 with sudo chmod 600 /boot/grub/grub.cfg. The check is not applicable when that GRUB configuration file is absent.",
+  "fixedMessage": "GRUB Configuration Permissions is configured correctly"
+}

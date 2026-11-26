@@ -1,0 +1,13 @@
+{
+  "name": "Snap Package Updates",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 1,
+  "vulnerability": "Installed Snap packages have refreshes available.",
+  "fix": "Run sudo snap refresh. The module is optional and should only be enabled on systems that use Snap.",
+  "fixedMessage": "Snap Package Updates is configured correctly"
+}

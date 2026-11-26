@@ -3,6 +3,23 @@
     "ufw",
     "users",
     "applications",
-    "services"
+    "services",
+    "apt_updates",
+    "automatic_updates",
+    "root_password_lock",
+    "password_min_length",
+    "password_history",
+    "null_passwords",
+    "shadow_permissions",
+    "grub_permissions",
+    "ssh_root_login",
+    "ssh_blank_passwords",
+    "tcp_syncookies",
+    "address_space_randomization",
+    "ipv4_forwarding",
+    "tcp_rfc1337",
+    "passwordless_sudo",
+    "password_min_age",
+    "password_max_age"
   ]
 }

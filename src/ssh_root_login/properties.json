@@ -1,0 +1,13 @@
+{
+  "name": "SSH Root Login",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 2,
+  "points": 3,
+  "vulnerability": "The effective OpenSSH server configuration permits direct root login.",
+  "fix": "Set PermitRootLogin no in /etc/ssh/sshd_config. The scripts validate the configuration but deliberately do not restart or reload SSH.",
+  "fixedMessage": "SSH Root Login is configured correctly"
+}

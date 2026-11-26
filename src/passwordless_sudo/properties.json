@@ -1,0 +1,13 @@
+{
+  "name": "Passwordless sudo",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 2,
+  "points": 3,
+  "vulnerability": "One or more active sudoers rules contain the NOPASSWD tag, allowing sudo commands without password authentication.",
+  "fix": "Replace active NOPASSWD: tags with PASSWD: throughout /etc/sudoers and regular files in /etc/sudoers.d, then validate the result with visudo -c.",
+  "fixedMessage": "Passwordless sudo is configured correctly"
+}

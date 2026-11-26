@@ -1,0 +1,13 @@
+{
+  "name": "Address Space Layout Randomization",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "Kernel address-space randomization is disabled or set below the full-randomization mode.",
+  "fix": "Set kernel.randomize_va_space=2 persistently and apply the setting with sysctl.",
+  "fixedMessage": "Address Space Layout Randomization is configured correctly"
+}

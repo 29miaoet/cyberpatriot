@@ -1,0 +1,13 @@
+{
+  "name": "User Password Maximum Age",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "One or more interactive human accounts have no 90-day maximum password lifetime.",
+  "fix": "Set the maximum password age to 90 days with chage -M 90 for interactive accounts with UID 1000 or greater, excluding UID 65534 and non-login shells. System and service accounts are left unchanged.",
+  "fixedMessage": "User Password Maximum Age is configured correctly"
+}

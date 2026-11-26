@@ -1,0 +1,13 @@
+{
+  "name": "Automatic APT Updates",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "APT package-list refreshes and unattended package upgrades are not both enabled.",
+  "fix": "Install unattended-upgrades and set APT::Periodic::Update-Package-Lists and APT::Periodic::Unattended-Upgrade to 1 in /etc/apt/apt.conf.d/20auto-upgrades.",
+  "fixedMessage": "Automatic APT Updates is configured correctly"
+}

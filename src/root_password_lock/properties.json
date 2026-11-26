@@ -1,0 +1,13 @@
+{
+  "name": "Root Account Password Lock",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 2,
+  "points": 3,
+  "vulnerability": "The root account is not locked against direct password authentication.",
+  "fix": "Run sudo passwd -l root. The setup script only attempts to unlock an already password-hashed root account; it will not create an empty or default root password.",
+  "fixedMessage": "Root Account Password Lock is configured correctly"
+}

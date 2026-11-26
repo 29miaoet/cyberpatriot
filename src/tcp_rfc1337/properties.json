@@ -1,0 +1,13 @@
+{
+  "name": "TCP TIME-WAIT Assassination Protection",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 1,
+  "vulnerability": "The kernel's RFC 1337 protection against TCP TIME-WAIT assassination is disabled.",
+  "fix": "Set net.ipv4.tcp_rfc1337=1 persistently and apply the setting with sysctl.",
+  "fixedMessage": "TCP TIME-WAIT Assassination Protection is configured correctly"
+}

@@ -125,7 +125,7 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 
 ## JSON configuration files
 
-The repository currently contains eight JSON files. Their paths and complete structures are shown below.
+The original account, application, and service configuration files are documented below. Each independently scored checklist module also has its own `properties.json`.
 
 ### 1. Root `config.json`
 
@@ -137,7 +137,24 @@ This file selects the module directories under `src/`. Its top-level value must 
     "ufw",
     "users",
     "applications",
-    "services"
+    "services",
+    "apt_updates",
+    "automatic_updates",
+    "root_password_lock",
+    "password_min_length",
+    "password_history",
+    "null_passwords",
+    "shadow_permissions",
+    "grub_permissions",
+    "ssh_root_login",
+    "ssh_blank_passwords",
+    "tcp_syncookies",
+    "address_space_randomization",
+    "ipv4_forwarding",
+    "tcp_rfc1337",
+    "passwordless_sudo",
+    "password_min_age",
+    "password_max_age"
   ]
 }
 ```
@@ -270,6 +287,36 @@ SMTP is a mail-transfer protocol, not a specific systemd service name. In this c
 
 During `--apply`, every configured service is installed and enabled/started, including unauthorized services. During `--fix`, unauthorized services are stopped and disabled but their packages remain installed. The detector reports an unauthorized service if it is active **or** enabled.
 
+### Additional independently scored checklist modules
+
+Each enabled checklist module below has its own `properties.json`, `setup.sh`, `fix.sh`, and `detect.sh`. Point values are assigned per module on a 1–3 scale according to the relative impact of the setting; they can be adjusted independently in that module's metadata.
+
+| Module directory | Check | Points |
+|---|---|---:|
+| `apt_updates` | Pending APT package upgrades | 3 |
+| `automatic_updates` | APT periodic list refresh and unattended upgrades | 2 |
+| `root_password_lock` | Root account password lock | 3 |
+| `password_min_length` | PAM minimum password length of 10 | 2 |
+| `password_history` | PAM remembers the previous three passwords | 2 |
+| `null_passwords` | PAM does not allow null passwords | 3 |
+| `shadow_permissions` | `/etc/shadow` permissions are 0600 | 2 |
+| `grub_permissions` | `/boot/grub/grub.cfg` permissions are 0600 | 2 |
+| `ssh_root_login` | Effective SSH policy sets `PermitRootLogin no` | 3 |
+| `ssh_blank_passwords` | Effective SSH policy sets `PermitEmptyPasswords no` | 3 |
+| `tcp_syncookies` | `net.ipv4.tcp_syncookies=1` | 2 |
+| `address_space_randomization` | `kernel.randomize_va_space=2` | 2 |
+| `ipv4_forwarding` | `net.ipv4.ip_forward=0` | 2 |
+| `tcp_rfc1337` | `net.ipv4.tcp_rfc1337=1` | 1 |
+| `passwordless_sudo` | No active `NOPASSWD:` sudoers tags | 3 |
+| `password_min_age` | New-account default `PASS_MIN_DAYS=2` | 1 |
+| `password_max_age` | Interactive user passwords expire after at most 90 days | 2 |
+
+Two additional modules are available but intentionally not enabled in the default `config.json`: `snap_updates` (enable it only on systems using Snap) and `lightdm_guest` (enable it only when LightDM is installed). The latter checks the effective `lightdm --show-config` output. Snap's update detector treats a system without Snap as not applicable.
+
+The following checklist items are deliberately not automated: normalizing APT repositories across Debian/Ubuntu/Mint (source formats, release codenames, and repository components differ); Mint Update Manager GUI workflows; FTP configuration; arbitrary user additions or password changes without team-specific account data; PAM faillock because the supplied stack fragments do not establish a complete distribution-safe policy; global umask enforcement; and forensic removal of suspicious directories, processes, cron entries, media/archive files, backdoors, or reverse shells. These require environment-specific review and should not be converted into broad automatic deletion or process-killing rules. Existing `users`, `applications`, and `services` modules continue to handle their explicitly configured entries.
+
+**Implementation notes:** Password history is implemented with `pam_pwhistory.so remember=3 use_authtok`, the dedicated PAM password-history module. The checklist's `chage -m 90` example sets a minimum interval; the 90-day maximum implied by its `/etc/shadow` example is implemented with `chage -M 90`. The maximum-age module applies to interactive accounts with UID ≥1000, excluding UID 65534 and non-login shells. The SSH scripts validate the configuration but do not reload SSH. IPv4 forwarding is disabled by default in this policy; do not enable that module on a machine intentionally acting as a router.
+
 ### Module JSON rules
 
 - Each module configuration file must contain exactly the keys shown for that file.
@@ -305,4 +352,4 @@ Scripts are invoked with Bash, with their module directory as the working direct
 
 ## Current implementation scope
 
-The application provides configuration parsing, VM gating, opt-in setup and remediation execution, rendered HTML templates, a desktop launcher, and the Flask scoring API. It does not install system services, daemonize itself, or provide a general-purpose repair workflow. Additional vulnerability modules and their detection logic are maintained separately under `src/`.
+The application provides configuration parsing, VM gating, opt-in setup and remediation execution, rendered HTML templates, a desktop launcher, and the Flask scoring API. It does not install system services, daemonize itself, or provide a general-purpose repair workflow. Each checklist vulnerability is independently configured under `src/` and uses the generic module scoring path.

@@ -1,0 +1,13 @@
+{
+  "name": "SSH Empty Password Authentication",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 2,
+  "points": 3,
+  "vulnerability": "The effective OpenSSH server configuration permits accounts with empty passwords to authenticate.",
+  "fix": "Set PermitEmptyPasswords no in /etc/ssh/sshd_config. The scripts validate the configuration but deliberately do not restart or reload SSH.",
+  "fixedMessage": "SSH Empty Password Authentication is configured correctly"
+}
