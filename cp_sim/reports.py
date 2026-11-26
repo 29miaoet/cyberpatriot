@@ -112,7 +112,6 @@ def write_module_readme(modules: list[str]) -> None:
         if asset_path.is_file():
             shutil.copy2(asset_path, DESKTOP_README_PATH.parent / asset_name)
     logger.info("Wrote module README to %s.", DESKTOP_README_PATH)
-    logger.info("Wrote module README to %s.", DESKTOP_README_PATH)
 
 
 
