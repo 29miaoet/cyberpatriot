@@ -1,0 +1,10 @@
+{
+  "authorizedApplications": [
+    "wireshark"
+  ],
+  "unauthorizedApplications": [
+    "ophcrack",
+    "nmap",
+    "zangband"
+  ]
+}
