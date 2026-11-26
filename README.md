@@ -62,12 +62,32 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
     │   ├── setup.sh              # installs configured packages with --apply
     │   ├── fix.sh                # removes unauthorized packages with --fix
     │   └── detect.sh             # checks unauthorized package presence
-    └── services/
-        ├── properties.json       # service module metadata
-        ├── services.json         # authorized/unauthorized service names
-        ├── setup.sh              # installs, enables, and starts with --apply
-        ├── fix.sh                # stops/disables unauthorized services with --fix
-        └── detect.sh             # checks unauthorized service state
+    ├── services/
+    │   ├── properties.json       # service module metadata
+    │   ├── services.json         # authorized/unauthorized service names
+    │   ├── setup.sh              # installs, enables, and starts with --apply
+    │   ├── fix.sh                # stops/disables unauthorized services with --fix
+    │   └── detect.sh             # checks unauthorized service state
+    ├── common.sh                 # shared helpers for module scripts
+    ├── apt_updates/              # pending APT package updates
+    ├── automatic_updates/        # periodic APT and unattended upgrades
+    ├── root_password_lock/       # root password account lock
+    ├── password_min_length/      # PAM minimum password length
+    ├── password_history/         # PAM password history
+    ├── null_passwords/           # PAM null-password authentication
+    ├── shadow_permissions/       # /etc/shadow mode
+    ├── grub_permissions/         # GRUB configuration mode
+    ├── ssh_root_login/           # SSH root login policy
+    ├── ssh_blank_passwords/      # SSH empty-password policy
+    ├── tcp_syncookies/           # TCP SYN cookies sysctl
+    ├── address_space_randomization/ # ASLR sysctl
+    ├── ipv4_forwarding/          # IPv4 forwarding sysctl
+    ├── tcp_rfc1337/              # TCP TIME-WAIT protection sysctl
+    ├── passwordless_sudo/        # sudoers NOPASSWD policy
+    ├── password_min_age/         # default minimum password age
+    ├── password_max_age/         # human-user maximum password age
+    ├── snap_updates/             # optional Snap package updates
+    └── lightdm_guest/            # optional LightDM guest-session policy
 ```
 
 The tree above shows the current module layout. New vulnerability modules are added as directories under `src/`; the scripts and metadata files are module-specific and may be optional unless the module's implementation requires them.
@@ -310,6 +330,8 @@ Each enabled checklist module below has its own `properties.json`, `setup.sh`, `
 | `passwordless_sudo` | No active `NOPASSWD:` sudoers tags | 3 |
 | `password_min_age` | New-account default `PASS_MIN_DAYS=2` | 1 |
 | `password_max_age` | Interactive user passwords expire after at most 90 days | 2 |
+| `snap_updates` | Installed Snap package refreshes (opt-in) | 1 |
+| `lightdm_guest` | LightDM guest sessions disabled (opt-in) | 1 |
 
 Two additional modules are available but intentionally not enabled in the default `config.json`: `snap_updates` (enable it only on systems using Snap) and `lightdm_guest` (enable it only when LightDM is installed). The latter checks the effective `lightdm --show-config` output. Snap's update detector treats a system without Snap as not applicable.
 
