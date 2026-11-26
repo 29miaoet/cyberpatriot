@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 from datetime import datetime
 from typing import Any
 
@@ -36,6 +37,25 @@ def render_account_list(usernames: list[str]) -> Markup:
     return Markup("<ul>{}</ul>").format(items)
 
 
+def render_service_list(services: list[str]) -> Markup:
+    """Render configured service identifiers and their human-readable roles."""
+    descriptions = {
+        "ssh": "OpenSSH server",
+        "vsftpd": "FTP server",
+        "postfix": "SMTP mail-transfer service",
+        "apache2": "Apache HTTP server",
+    }
+    if not services:
+        return Markup("<p>None configured.</p>")
+    items = Markup("").join(
+        Markup("<li><code>{}</code> — {}</li>").format(
+            service, descriptions.get(service, "Service")
+        )
+        for service in services
+    )
+    return Markup("<ul>{}</ul>").format(items)
+
+
 def write_module_readme(modules: list[str]) -> None:
     """Populate the module README template and write the desktop README."""
     DESKTOP_README_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -59,13 +79,39 @@ def write_module_readme(modules: list[str]) -> None:
     else:
         authorized_users = Markup("<p>Not configured.</p>")
         authorized_administrators = Markup("<p>Not configured.</p>")
+    if "services" in modules:
+        services_path = ROOT / "src" / "services" / "services.json"
+        try:
+            service_config = json.loads(services_path.read_text(encoding="utf-8"))
+            authorized_services = service_config["authorizedServices"]
+            unauthorized_services = service_config["unauthorizedServices"]
+            if not all(
+                isinstance(items, list) and all(isinstance(item, str) for item in items)
+                for items in (authorized_services, unauthorized_services)
+            ):
+                raise ValueError("service lists must be arrays of strings")
+        except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+            raise CpSimError(f"Invalid service configuration in {services_path}: {exc}") from exc
+        authorized_services_html = render_service_list(authorized_services)
+        unauthorized_services_html = render_service_list(unauthorized_services)
+    else:
+        authorized_services_html = Markup("<p>Not configured.</p>")
+        unauthorized_services_html = Markup("<p>Not configured.</p>")
+
     document = render_template("ReadMe.html", {
         "OS": os_details["pretty_name"], "TITLE": title,
         "LINUX_ROOT_POLICY": root_policy, "USER_README_HTML": user_readme_html,
         "AUTHORIZED_USERS": authorized_users,
         "AUTHORIZED_ADMINISTRATORS": authorized_administrators,
+        "AUTHORIZED_SERVICES": authorized_services_html,
+        "UNAUTHORIZED_SERVICES": unauthorized_services_html,
     })
     DESKTOP_README_PATH.write_text(document, encoding="utf-8")
+    for asset_name in ("background.jpg", "logo.svg"):
+        asset_path = ROOT / "templates" / asset_name
+        if asset_path.is_file():
+            shutil.copy2(asset_path, DESKTOP_README_PATH.parent / asset_name)
+    logger.info("Wrote module README to %s.", DESKTOP_README_PATH)
     logger.info("Wrote module README to %s.", DESKTOP_README_PATH)
 
 
