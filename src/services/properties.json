@@ -1,0 +1,6 @@
+{
+  "name": "Authorized and Unauthorized Services",
+  "points": 3,
+  "vulnerability": "Unapproved network services expose unnecessary listening endpoints and increase the system attack surface.",
+  "fix": "Stop and disable every service listed in unauthorizedServices. Keep its package installed so the account and service policy can be reviewed independently."
+}
