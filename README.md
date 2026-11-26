@@ -15,10 +15,12 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 7. **Fix scripts:** A module may contain `fix.sh`. Fix scripts execute only when the user explicitly supplies `--fix`. They remediate the configured practice state. `--apply` and `--fix` are mutually exclusive.
 8. **User setup policy:** The users module's `setup.sh` creates every account listed in all four arrays in `src/users/users.json`, adds every configured account to the shared `users` group, and grants `sudo` membership to both authorized and unauthorized administrators to establish the configured practice state. Newly created accounts have locked passwords. Setup does not remove or demote accounts; remediation is exclusive to `--fix`.
 9. **User remediation policy:** The users module's `fix.sh` removes unauthorized users and strips administrative group membership from unauthorized administrators without deleting those latter accounts. If an account appears in both unauthorized lists, unauthorized-user removal takes precedence.
-10. **Generated README account lists:** When the users module is enabled, the generated desktop README displays the parsed `authorizedUsers` and `authorizedAdministrators` arrays from `src/users/users.json`.
-11. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when the check is fixed, `1` when unresolved, and any other status for detector errors.
-12. **Module index:** At startup, populate `templates/ReadMe.html` with detected distribution information and write `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
-13. **Scoring report:** Populate `templates/ScoringReport.html` at startup and on each report request, then write the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, default 1). The users module scores each distinct unauthorized user/admin finding at 3 points, with unauthorized-user removal taking precedence.
+10. **Application policy:** The applications module installs every package in both application arrays during `--apply`, creating the configured practice state. Its `--fix` script removes packages in `unauthorizedApplications` while leaving authorized packages installed.
+11. **Service policy:** The services module installs and enables/starts every configured service during `--apply`, including unauthorized services to establish the practice state. Its `--fix` script stops and disables unauthorized services but leaves their packages installed. Service names map to Debian package names and systemd units as documented below.
+12. **Generated README account lists:** When the users module is enabled, the generated desktop README displays the parsed `authorizedUsers` and `authorizedAdministrators` arrays from `src/users/users.json`.
+13. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when all its checks are fixed, `1` when one or more findings remain, and any other status for detector errors.
+14. **Module index:** At startup, populate `templates/ReadMe.html` with detected distribution information and write `~/Desktop/README.html`. An optional root-level `UserReadMe.html` is inserted as custom HTML.
+15. **Scoring report:** Populate `templates/ScoringReport.html` at startup and on each report request, then write the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, default 1). Users, applications, and services score each distinct unauthorized entry at 3 points.
 14. **Desktop shortcut:** Generate `~/Desktop/Scoring Report.desktop`. It opens `http://127.0.0.1:5000/` in the default browser; it does not start or manage Flask.
 15. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
 16. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
@@ -48,12 +50,24 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
     │   ├── setup.sh              # optional; only run with --apply
     │   ├── fix.sh                # optional; only run with --fix
     │   └── detect.sh             # optional; used by scoring
-    └── users/
-        ├── properties.json       # users module metadata
-        ├── users.json            # authorized/unauthorized account lists
-        ├── setup.sh              # optional; only run with --apply
-        ├── fix.sh                # optional; only run with --fix
-        └── detect.sh             # optional; used by scoring
+    ├── users/
+    │   ├── properties.json       # users module metadata
+    │   ├── users.json            # authorized/unauthorized account lists
+    │   ├── setup.sh              # only run with --apply
+    │   ├── fix.sh                # only run with --fix
+    │   └── detect.sh             # used by scoring
+    ├── applications/
+    │   ├── properties.json       # application module metadata
+    │   ├── applications.json     # authorized/unauthorized APT packages
+    │   ├── setup.sh              # installs configured packages with --apply
+    │   ├── fix.sh                # removes unauthorized packages with --fix
+    │   └── detect.sh             # checks unauthorized package presence
+    └── services/
+        ├── properties.json       # service module metadata
+        ├── services.json         # authorized/unauthorized service names
+        ├── setup.sh              # installs, enables, and starts with --apply
+        ├── fix.sh                # stops/disables unauthorized services with --fix
+        └── detect.sh             # checks unauthorized service state
 ```
 
 The tree above shows the current module layout. New vulnerability modules are added as directories under `src/`; the scripts and metadata files are module-specific and may be optional unless the module's implementation requires them.
@@ -111,31 +125,26 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 
 ## JSON configuration files
 
-The repository currently contains four JSON files. Their paths and complete structures are shown below.
+The repository currently contains eight JSON files. Their paths and complete structures are shown below.
 
 ### 1. Root `config.json`
 
-This file selects which module directories under `src/` are loaded. Its top-level value must be one JSON object containing a `vulnerabilities` array of module directory names.
+This file selects the module directories under `src/`. Its top-level value must be one JSON object containing a `vulnerabilities` array of unique directory names.
 
 ```json
 {
   "vulnerabilities": [
     "ufw",
-    "users"
+    "users",
+    "applications",
+    "services"
   ]
 }
 ```
 
-Rules:
-
-- Each array element must match an existing directory directly under `src/`.
-- Duplicate module names and path traversal are rejected.
-- The order of entries determines the configured module order.
-- Add a module by adding its directory under `src/` and listing its directory name here.
+Every entry must match an existing directory directly under `src/`. Duplicate names and path traversal are rejected. The array order determines module execution and report order.
 
 ### 2. `src/ufw/properties.json`
-
-This file provides the UFW module's display name, supported distribution labels, difficulty, score value, vulnerability description, and remediation guidance.
 
 ```json
 {
@@ -148,13 +157,12 @@ This file provides the UFW module's display name, supported distribution labels,
   "difficulty": 1,
   "points": 3,
   "vulnerability": "Misconfigured firewall can allow attackers in through backdoors.",
-  "fix": "Open terminal, run \"sudo ufw enable\""
+  "fix": "Open terminal, run \\"sudo ufw enable\\"",
+  "fixedMessage": "UFW (uncomplicated firewall) is enabled"
 }
 ```
 
 ### 3. `src/users/properties.json`
-
-This file provides the users module's display name, score value, vulnerability description, and remediation guidance.
 
 ```json
 {
@@ -167,38 +175,109 @@ This file provides the users module's display name, score value, vulnerability d
 
 ### 4. `src/users/users.json`
 
-This file defines four arrays of Linux account names. All four keys are required:
+This file contains exactly four arrays of Linux account names:
 
 - `authorizedUsers`: accounts that should exist and belong to the shared `users` group.
-- `unauthorizedUsers`: accounts that should exist in the vulnerable practice state and be removed by `--fix`.
+- `unauthorizedUsers`: accounts created in the practice state and removed by `--fix`.
 - `authorizedAdministrators`: accounts that should exist, belong to `users`, and have `sudo` privileges.
-- `unauthorizedAdministrators`: accounts that should exist and initially have `sudo` privileges in the vulnerable practice state; `--fix` removes their administrative group membership but preserves the accounts.
-
-Current file structure:
+- `unauthorizedAdministrators`: accounts created with administrative privileges in the practice state; `--fix` removes those privileges but preserves the accounts.
 
 ```json
 {
-  "authorizedUsers": [
-    "bob",
-    "alice",
-    "jane",
-    "tom"
+  "authorizedUsers": ["bob", "alice", "jane", "tom"],
+  "unauthorizedUsers": ["jack", "tina"],
+  "authorizedAdministrators": ["bob", "jane"],
+  "unauthorizedAdministrators": ["alice"]
+}
+```
+
+Account names must be valid Linux usernames; the protected `root` account is rejected. An account in both unauthorized arrays is treated as an unauthorized user and removed rather than merely demoted.
+
+### 5. `src/applications/properties.json`
+
+```json
+{
+  "name": "Authorized and Unauthorized Applications",
+  "points": 3,
+  "vulnerability": "Unapproved software increases the attack surface and may violate system-use policy.",
+  "fix": "Remove every installed application listed in unauthorizedApplications while preserving authorized applications."
+}
+```
+
+### 6. `src/applications/applications.json`
+
+This file contains exactly two arrays of Debian package names:
+
+- `authorizedApplications`: packages that should be installed and retained.
+- `unauthorizedApplications`: packages installed by `--apply` to create the practice state and removed by `--fix`.
+
+```json
+{
+  "authorizedApplications": [
+    "wireshark"
   ],
-  "unauthorizedUsers": [
-    "jack",
-    "tina"
-  ],
-  "authorizedAdministrators": [
-    "bob",
-    "jane"
-  ],
-  "unauthorizedAdministrators": [
-    "alice"
+  "unauthorizedApplications": [
+    "ophcrack",
+    "nmap",
+    "zangband"
   ]
 }
 ```
 
-Account names must be valid Linux usernames; the protected `root` account is rejected. If a name appears in both unauthorized arrays, the unauthorized-user rule takes precedence: the account is removed rather than merely demoted. The detector and scoring logic count each distinct unauthorized finding once, at 3 points per finding.
+These values are APT package names, not display names or executable paths. The setup script installs all listed packages, including unauthorized ones, so that the detector can identify them. The fix script runs APT removal only for unauthorized packages; it does not purge package configuration or automatically remove dependencies. A package must be available from the VM's configured APT repositories for setup to succeed.
+
+### 7. `src/services/properties.json`
+
+```json
+{
+  "name": "Authorized and Unauthorized Services",
+  "points": 3,
+  "vulnerability": "Unapproved network services expose unnecessary listening endpoints and increase the system attack surface.",
+  "fix": "Stop and disable every service listed in unauthorizedServices. Keep its package installed so the account and service policy can be reviewed independently."
+}
+```
+
+### 8. `src/services/services.json`
+
+This file contains exactly two arrays of supported service identifiers:
+
+- `authorizedServices`: services that should be installed, enabled, and running.
+- `unauthorizedServices`: services enabled and started by `--apply` to create the practice state, then stopped and disabled by `--fix`.
+
+```json
+{
+  "authorizedServices": [
+    "ssh",
+    "vsftpd"
+  ],
+  "unauthorizedServices": [
+    "postfix",
+    "apache2"
+  ]
+}
+```
+
+The service module currently accepts these identifiers and maps them to Debian packages and systemd units:
+
+| JSON identifier | APT package | systemd unit | Description |
+|---|---|---|---|
+| `ssh` | `openssh-server` | `ssh.service` | OpenSSH server |
+| `vsftpd` | `vsftpd` | `vsftpd.service` | FTP server |
+| `postfix` | `postfix` | `postfix.service` | SMTP mail-transfer service |
+| `apache2` | `apache2` | `apache2.service` | Apache HTTP server |
+
+SMTP is a mail-transfer protocol, not a specific systemd service name. In this configuration, `postfix` is the concrete SMTP server implementation. Do not put the generic string `smtp` in the arrays; use a supported service identifier. The module requires systemd and uses the listed Debian package/unit mappings.
+
+During `--apply`, every configured service is installed and enabled/started, including unauthorized services. During `--fix`, unauthorized services are stopped and disabled but their packages remain installed. The detector reports an unauthorized service if it is active **or** enabled.
+
+### Module JSON rules
+
+- Each module configuration file must contain exactly the keys shown for that file.
+- Every list must be a JSON array of strings with no duplicates.
+- An item cannot appear in both the authorized and unauthorized arrays of the same module.
+- Application entries must be valid Debian package-name strings.
+- Service entries must match one of the four supported identifiers in the mapping table.
+- Each unauthorized user, application, or service is scored independently for 3 points. A finding is fixed when its detector no longer reports it.
 
 ### Module `properties.json` fields
 
