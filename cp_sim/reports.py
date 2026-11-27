@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shutil
 from datetime import datetime
 from typing import Any
 
@@ -122,10 +121,11 @@ def write_module_readme(modules: list[str]) -> None:
         "AUTHORIZED_SERVICES": authorized_services_html,
     })
     DESKTOP_README_PATH.write_text(document, encoding="utf-8")
+    # Remove legacy copies created by older versions. Assets are served by Flask.
     for asset_name in ("background.jpg", "logo.svg"):
-        asset_path = ROOT / "templates" / asset_name
-        if asset_path.is_file():
-            shutil.copy2(asset_path, DESKTOP_README_PATH.parent / asset_name)
+        legacy_asset = DESKTOP_README_PATH.parent / asset_name
+        if legacy_asset.is_file():
+            legacy_asset.unlink()
     logger.info("Wrote module README to %s.", DESKTOP_README_PATH)
 
 
