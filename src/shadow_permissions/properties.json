@@ -1,0 +1,13 @@
+{
+  "name": "Shadow File Permissions",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "The /etc/shadow file has permissions other than 0600, potentially exposing password-hash data to other local accounts.",
+  "fix": "Set /etc/shadow to mode 0600 with sudo chmod 600 /etc/shadow.",
+  "fixedMessage": "Shadow File Permissions is configured correctly"
+}

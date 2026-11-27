@@ -1,0 +1,13 @@
+{
+  "name": "Minimum Password Age",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 1,
+  "vulnerability": "The system-wide default minimum password age is less than two days.",
+  "fix": "Set PASS_MIN_DAYS 2 in /etc/login.defs. This is the default for newly created accounts; it does not update existing users' shadow entries.",
+  "fixedMessage": "Minimum Password Age is configured correctly"
+}

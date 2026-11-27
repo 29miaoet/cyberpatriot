@@ -1,0 +1,13 @@
+{
+  "name": "Minimum Password Length",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "The active pam_unix password module does not enforce a minimum length of 10 characters.",
+  "fix": "Set minlen=10 on the active pam_unix.so entry in /etc/pam.d/common-password.",
+  "fixedMessage": "Minimum Password Length is configured correctly"
+}

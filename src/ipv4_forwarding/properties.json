@@ -1,0 +1,13 @@
+{
+  "name": "IPv4 Packet Forwarding",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 2,
+  "vulnerability": "The host forwards IPv4 packets even though it is not configured to act as a router.",
+  "fix": "Set net.ipv4.ip_forward=0 persistently and apply the setting with sysctl. Do not use this policy on a system intentionally configured as a router.",
+  "fixedMessage": "IPv4 Packet Forwarding is configured correctly"
+}

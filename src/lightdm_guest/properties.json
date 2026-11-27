@@ -1,0 +1,13 @@
+{
+  "name": "LightDM Guest Account",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 1,
+  "points": 1,
+  "vulnerability": "LightDM is configured to allow guest sessions.",
+  "fix": "Set allow-guest=false in a LightDM [Seat:*] configuration drop-in. The module is optional and only applies when LightDM is installed.",
+  "fixedMessage": "LightDM Guest Account is configured correctly"
+}

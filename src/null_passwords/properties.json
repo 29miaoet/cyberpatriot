@@ -1,0 +1,13 @@
+{
+  "name": "Null Password Authentication",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 2,
+  "points": 3,
+  "vulnerability": "The PAM common-auth stack permits null passwords through the pam_unix nullok option.",
+  "fix": "Remove nullok from active pam_unix.so entries in /etc/pam.d/common-auth.",
+  "fixedMessage": "Null Password Authentication is configured correctly"
+}

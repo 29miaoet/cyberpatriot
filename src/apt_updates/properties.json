@@ -1,0 +1,13 @@
+{
+  "name": "APT Package Updates",
+  "distributions": [
+    "Ubuntu",
+    "Debian",
+    "Mint"
+  ],
+  "difficulty": 2,
+  "points": 3,
+  "vulnerability": "Installed APT packages have available upgrades. A stale package index can also prevent the system from seeing current updates.",
+  "fix": "Run apt-get update, apt-get upgrade, and apt-get full-upgrade. This module checks the simulated full-upgrade plan; it does not automatically remove packages.",
+  "fixedMessage": "APT Package Updates is configured correctly"
+}
