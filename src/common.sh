@@ -212,3 +212,19 @@ $key = $value
 EOF
     cp_sim_root sysctl -p "$config"
 }
+
+# Require an explicit interactive confirmation before a remediation changes
+# system state. Non-interactive execution is deliberately fail-closed.
+cp_sim_confirm() {
+    local description="$1" answer
+    if [[ ! -t 0 ]]; then
+        printf '%s\n' "Skipped: confirmation is required for $description, but stdin is not a terminal." >&2
+        return 1
+    fi
+    printf '%s\n' "" "This action may change system configuration or remove/disable software." "$description"
+    read -r -p "Continue? Type 'yes' to proceed [default: no]: " answer
+    case "$answer" in
+        yes|YES|Yes) return 0 ;;
+        *) printf '%s\n' "Cancelled; no changes made."; return 1 ;;
+    esac
+}

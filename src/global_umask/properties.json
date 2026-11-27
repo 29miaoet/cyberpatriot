@@ -1,0 +1,6 @@
+{
+  "name": "System-Wide Default Umask",
+  "points": 1,
+  "vulnerability": "Default file creation permissions are more permissive than the configured baseline.",
+  "fix": "Set the login.defs UMASK and login-shell profile umask to 027."
+}

@@ -69,7 +69,7 @@ else
 fi
 
 packages_missing=false
-for package in python3 python3-venv python3-pip; do
+for package in python3 python3-venv python3-pip lsb-release; do
     if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q 'install ok installed'; then
         packages_missing=true
         break
@@ -78,7 +78,7 @@ done
 
 if [[ "$packages_missing" == true ]]; then
     "${APT[@]}" update
-    "${APT[@]}" install -y python3 python3-venv python3-pip
+    "${APT[@]}" install -y python3 python3-venv python3-pip lsb-release
 fi
 
 # Validate project configuration before creating the virtual environment.

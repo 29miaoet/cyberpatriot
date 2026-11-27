@@ -1,0 +1,6 @@
+{
+  "name": "Distribution-Specific APT Sources",
+  "points": 2,
+  "vulnerability": "APT repositories are missing or do not match the installed Debian-family distribution.",
+  "fix": "Review the generated official repository entries, then run the APT source remediation and confirm the change."
+}

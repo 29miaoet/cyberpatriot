@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -14,16 +15,22 @@ logger = logging.getLogger("cp-sim")
 
 
 def run_module_script(
-    script: Path, module_dir: Path, label: str
+    script: Path, module_dir: Path, label: str, *, interactive: bool = False
 ) -> subprocess.CompletedProcess[str]:
     if not script.is_file():
         raise CpSimError(f"Missing {label} script: {script}")
     if script.is_symlink():
         raise CpSimError(f"Refusing to execute symlinked script: {script}")
+    command = ["/bin/bash", str(script)]
+    environment = {**os.environ, "PATH": os.environ.get("PATH", "/usr/sbin:/usr/bin:/sbin:/bin")}
+    if interactive:
+        return subprocess.run(
+            command, cwd=module_dir, check=False, timeout=SCRIPT_TIMEOUT_SECONDS,
+            env=environment,
+        )
     return subprocess.run(
-        ["/bin/bash", str(script)], cwd=module_dir, check=False,
-        capture_output=True, text=True, timeout=SCRIPT_TIMEOUT_SECONDS,
-        env={**os.environ, "PATH": os.environ.get("PATH", "/usr/sbin:/usr/bin:/sbin:/bin")},
+        command, cwd=module_dir, check=False, capture_output=True, text=True,
+        timeout=SCRIPT_TIMEOUT_SECONDS, env=environment,
     )
 
 
@@ -34,9 +41,24 @@ def _run_module_scripts(modules: list[str], script_name: str, action: str) -> No
         if not script.exists():
             logger.info("No %s found for %s; skipping.", script_name, name)
             continue
+        if action == "fix" and name not in {"apt_sources", "uid0_accounts"}:
+            if not sys.stdin.isatty():
+                logger.warning("Skipping %s: --fix requires an interactive confirmation terminal.", name)
+                continue
+            try:
+                answer = input(
+                    f"Run the potentially system-changing fix for '{name}'? "
+                    "Type 'yes' to proceed [default: no]: "
+                ).strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                logger.warning("Skipping %s: confirmation was not provided.", name)
+                continue
+            if answer != "yes":
+                logger.info("Skipped fix for %s; no changes requested.", name)
+                continue
         logger.info("Running %s for %s (--%s was supplied).", script_name, name, action)
         try:
-            result = run_module_script(script, directory, script_name)
+            result = run_module_script(script, directory, script_name, interactive=(script_name == "fix.sh"))
         except subprocess.TimeoutExpired as exc:
             raise CpSimError(f"{script_name} timed out for {name}.") from exc
         if result.stdout:

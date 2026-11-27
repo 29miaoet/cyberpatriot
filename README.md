@@ -69,6 +69,7 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
     │   ├── fix.sh                # stops/disables unauthorized services with --fix
     │   └── detect.sh             # checks unauthorized service state
     ├── common.sh                 # shared helpers for module scripts
+    ├── apt_sources/              # Debian/Ubuntu/Mint official APT source entries
     ├── apt_updates/              # pending APT package updates
     ├── automatic_updates/        # periodic APT and unattended upgrades
     ├── root_password_lock/       # root password account lock
@@ -86,6 +87,9 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
     ├── passwordless_sudo/        # sudoers NOPASSWD policy
     ├── password_min_age/         # default minimum password age
     ├── password_max_age/         # human-user maximum password age
+    ├── global_umask/             # system-wide default umask
+    ├── uid0_accounts/            # explicitly allowlisted UID-0 accounts
+    │   └── authorizedRootAccounts.json # accounts permitted to retain UID 0
     ├── snap_updates/             # optional Snap package updates
     └── lightdm_guest/            # optional LightDM guest-session policy
 ```
@@ -96,7 +100,7 @@ Generated at runtime in the VM:
 
 - `Scoring Report.html` in the repository root
 - `~/Desktop/README.html` — configured module index
-- `~/Desktop/Answer Key.md` — vulnerability descriptions and remediation guidance
+- `Answer Key.md` in the repository root — vulnerability descriptions and remediation guidance
 - `~/Desktop/Scoring Report.desktop` — report launcher
 
 ## Installation and launch
@@ -111,7 +115,7 @@ chmod +x main.sh
 The launcher:
 
 1. Checks that it is running inside a detected VM before making system changes.
-2. Installs `python3`, `python3-venv`, and `python3-pip` with APT if they are missing.
+2. Installs `python3`, `python3-venv`, `python3-pip`, and `lsb-release` with APT if they are missing.
 3. Creates the project-local `.venv/` virtual environment.
 4. Installs the packages listed in `requirements.txt`.
 5. Starts cp-sim in read-only mode by default.
@@ -130,7 +134,7 @@ To explicitly run module remediation scripts:
 ./main.sh --fix
 ```
 
-The two flags are mutually exclusive. Without either flag, neither setup nor fix scripts are executed.
+The two flags are mutually exclusive. Without either flag, neither setup nor fix scripts are executed. When `--fix` is used, the launcher asks for a separate explicit `yes` confirmation before each module remediation; declining skips that module. In non-interactive sessions, all fixes are skipped. The UID-0 account remediation also displays the exact accounts and asks for a second confirmation before deleting them; home directories are preserved.
 
 Do not use `--apply` or `--fix` on a host machine or a VM containing data you need to preserve. For the current UFW module, `--apply` disables UFW and `--fix` enables it. The services module starts every configured service during `--apply`, including unauthorized network services such as Postfix and Apache. Run the practice VM on an isolated virtual network; do not expose these services to a public network or a trusted LAN.
 
@@ -141,7 +145,7 @@ Do not use `--apply` or `--fix` on a host machine or a VM containing data you ne
 - Keep the terminal running while viewing the report; closing it stops the service.
 - Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
 - The report automatically refreshes every 5 seconds. Each refresh reruns the read-only detectors; it does not run setup or remediation scripts.
-- The report lists only scored issues that have been fixed and earned points. Unresolved issues and checks that have not been fixed are omitted. If no scored issues have been fixed, the issues section is left empty. Vulnerability descriptions and remediation guidance are kept separately in `~/Desktop/Answer Key.md`.
+- The report lists only scored issues that have been fixed and earned points. Unresolved issues and checks that have not been fixed are omitted. If no scored issues have been fixed, the issues section is left empty. Vulnerability descriptions and remediation guidance are kept separately in the repository-root `Answer Key.md`.
 
 ## JSON configuration files
 
@@ -158,6 +162,7 @@ This file selects the module directories under `src/`. Its top-level value must 
     "users",
     "applications",
     "services",
+    "apt_sources",
     "apt_updates",
     "automatic_updates",
     "root_password_lock",
@@ -174,7 +179,9 @@ This file selects the module directories under `src/`. Its top-level value must 
     "tcp_rfc1337",
     "passwordless_sudo",
     "password_min_age",
-    "password_max_age"
+    "password_max_age",
+    "global_umask",
+    "uid0_accounts"
   ]
 }
 ```
@@ -313,6 +320,7 @@ Each enabled checklist module below has its own `properties.json`, `setup.sh`, `
 
 | Module directory | Check | Points |
 |---|---|---:|
+| `apt_sources` | Official APT sources match Debian/Ubuntu/Mint release | 2 |
 | `apt_updates` | Pending APT package upgrades | 3 |
 | `automatic_updates` | APT periodic list refresh and unattended upgrades | 2 |
 | `root_password_lock` | Root account password lock | 3 |
@@ -330,12 +338,16 @@ Each enabled checklist module below has its own `properties.json`, `setup.sh`, `
 | `passwordless_sudo` | No active `NOPASSWD:` sudoers tags | 3 |
 | `password_min_age` | New-account default `PASS_MIN_DAYS=2` | 1 |
 | `password_max_age` | Interactive user passwords expire after at most 90 days | 2 |
+| `global_umask` | Default login umask is 027 | 1 |
+| `uid0_accounts` | Only explicitly allowlisted accounts have UID 0 | 3 |
 | `snap_updates` | Installed Snap package refreshes (opt-in) | 1 |
 | `lightdm_guest` | LightDM guest sessions disabled (opt-in) | 1 |
 
 Two additional modules are available but intentionally not enabled in the default `config.json`: `snap_updates` (enable it only on systems using Snap) and `lightdm_guest` (enable it only when LightDM is installed). The latter checks the effective `lightdm --show-config` output. Snap's update detector treats a system without Snap as not applicable.
 
-The following checklist items are deliberately not automated: normalizing APT repositories across Debian/Ubuntu/Mint (source formats, release codenames, and repository components differ); Mint Update Manager GUI workflows; FTP configuration; arbitrary user additions or password changes without team-specific account data; automatic deletion of extra UID-0 accounts without an explicit authorized-account list; PAM faillock because the supplied stack fragments do not establish a complete distribution-safe policy; global umask enforcement; and forensic removal of suspicious directories, processes, cron entries, media/archive files, backdoors, or reverse shells. These require environment-specific review and should not be converted into broad automatic deletion or process-killing rules. Existing `users`, `applications`, and `services` modules continue to handle their explicitly configured entries.
+The following checklist items remain manual: Mint Update Manager GUI workflows; FTP configuration (intentionally excluded); arbitrary user additions or password changes without team-specific account data; PAM faillock because the supplied stack fragments do not establish a complete distribution-safe policy; and forensic removal of suspicious directories, processes, cron entries, media/archive files, backdoors, or reverse shells. These require environment-specific review and should not be converted into broad automatic deletion or process-killing rules. The users module continues to use the explicit account lists in `src/users/users.json`.
+
+**APT source handling:** `apt_sources` reads `lsb_release -a` and generates official repository entries for Debian, Ubuntu, or Linux Mint. It writes only `/etc/apt/sources.list.d/00-cp-sim-official.list`, preserves existing source files and third-party repositories, backs up its own managed file before replacement, and restores that file if `apt-get update` fails. It does not disable or rewrite existing repository definitions. Linux Mint uses its Mint codename plus `UBUNTU_CODENAME` from `/etc/os-release` for the Ubuntu base repositories.
 
 **Implementation notes:** Password history is implemented with `pam_pwhistory.so remember=3 use_authtok`, the dedicated PAM password-history module. The checklist's `chage -m 90` example sets a minimum interval; the 90-day maximum implied by its `/etc/shadow` example is implemented with `chage -M 90`. The maximum-age module applies to interactive accounts with UID ≥1000, excluding UID 65534 and non-login shells. The SSH scripts validate the configuration but do not reload SSH. IPv4 forwarding is disabled by default in this policy; do not enable that module on a machine intentionally acting as a router.
 

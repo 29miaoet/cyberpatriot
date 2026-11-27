@@ -1,0 +1,6 @@
+{
+  "name": "Additional UID-0 Accounts",
+  "points": 3,
+  "vulnerability": "Accounts other than explicitly authorized accounts have UID 0 and therefore root-equivalent privileges.",
+  "fix": "Review src/uid0_accounts/authorizedRootAccounts.json. The fix removes unlisted UID-0 accounts but preserves their home directories."
+}
