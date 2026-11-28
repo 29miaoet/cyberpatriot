@@ -331,7 +331,6 @@ class CyberPatriotGUI:
             )
             assert process.stdout is not None
             for line in process.stdout:
-                self.events.put(("output", line.rstrip()))
                 match = PROGRESS_RE.search(line) or TTY_PROGRESS_RE.search(line)
                 if match:
                     done, total = map(int, match.groups())
