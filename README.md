@@ -143,6 +143,18 @@ When `--fix` is used, each module requires a separate explicit `yes` confirmatio
 
 Do not use `--setup` or `--fix` on a host machine or a VM containing data you need to preserve. For the current UFW module, `--setup` disables UFW and `--fix` enables it. The services module starts every configured service during `--setup`, including unauthorized network services such as Postfix and Apache. Run the practice VM on an isolated virtual network; do not expose these services to a public network or a trusted LAN.
 
+## Tkinter desktop GUI
+
+The optional desktop interface is in `gui/`. After running `main.sh` once to install the system dependencies (including `python3-tk`), launch it from the repository root:
+
+```bash
+python3 gui/main.py
+```
+
+The GUI lets you select the vulnerability modules written to the root `config.json`, run `--setup`, `--start`, `--stop`, and `--report`, and open `--fix` in a terminal so its existing per-module confirmation prompts remain interactive. It displays setup progress, tails `cp-sim.log`, and polls the Flask `/api/scores` endpoint for live detector results. Start scoring from the GUI before live scores can be displayed.
+
+The GUI uses only Python's standard library and Tkinter. It does not replace the CLI; every action is dispatched through `main.sh`. See [gui/README.md](gui/README.md) for details.
+
 ## Using the scoring report
 
 - Run `./main.sh --start` to start the background service.
