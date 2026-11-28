@@ -194,14 +194,16 @@ class CyberPatriotGUI:
             ("Generate report", "--report", "Generate and open the Markdown scoring report."),
         ]
         self.action_buttons: list[ttk.Button] = []
-        for label, flag, help_text in buttons:
+        actions.columnconfigure(0, weight=1)
+        actions.columnconfigure(1, weight=1)
+        for index, (label, flag, help_text) in enumerate(buttons):
             button = ttk.Button(
                 actions,
                 text=label,
                 style="Action.TButton",
                 command=lambda value=flag: self._run_action(value),
             )
-            button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), pady=2)
+            button.grid(row=index // 2, column=index % 2, sticky="ew", padx=3, pady=3)
             self.action_buttons.append(button)
             button.configure(cursor="hand2")
             button.bind("<Enter>", lambda _e, text=help_text: self.status_var.set(text))
@@ -229,7 +231,9 @@ class CyberPatriotGUI:
         ):
             self.score_tree.heading(key, text=title)
             self.score_tree.column(key, width=width, anchor=tk.W)
-        score_scroll = ttk.Scrollbar(parent, orient=tk.VERTICAL, command=self.score_tree.yview)
+        table_frame = ttk.Frame(parent)
+        table_frame.pack(fill=tk.BOTH, expand=True)
+        score_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.score_tree.yview)
         self.score_tree.configure(yscrollcommand=score_scroll.set)
         self.score_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         score_scroll.pack(side=tk.RIGHT, fill=tk.Y)
