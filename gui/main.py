@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 import queue
 import re
 import shlex
 import subprocess
 import sys
 import threading
-import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -375,6 +373,12 @@ class CyberPatriotGUI:
                 kind, payload = self.events.get_nowait()
                 if kind == "output":
                     self._append_log(str(payload))
+                elif kind == "scores":
+                    self._render_scores(payload)
+                elif kind == "scores_unavailable":
+                    if not self.running:
+                        self.score_var.set("Scoring server unavailable")
+                        self.score_detail_var.set("Use Start scoring to launch the local Flask service.")
                 elif kind == "progress":
                     done, total = payload  # type: ignore[misc]
                     percentage = 100 * done / max(total, 1)
@@ -505,44 +509,6 @@ def main() -> int:
     except RuntimeError:
         root.destroy()
         return 1
-    # Route asynchronous score responses to the Tk main thread.
-    original_process_events = CyberPatriotGUI._process_events
-
-    def process_events_with_scores(self: CyberPatriotGUI) -> None:
-        try:
-            while True:
-                kind, payload = self.events.get_nowait()
-                if kind in {"scores", "scores_unavailable"}:
-                    self._handle_score_event(kind, payload)
-                elif kind == "output":
-                    self._append_log(str(payload))
-                elif kind == "progress":
-                    done, total = payload  # type: ignore[misc]
-                    percentage = 100 * done / max(total, 1)
-                    self.progress_var.set(percentage)
-                    self.progress_label.configure(text=f"{done} of {total} modules ({percentage:.0f}%)")
-                elif kind == "finished":
-                    flag, code = payload  # type: ignore[misc]
-                    self.running = False
-                    self._set_buttons(True)
-                    self.status_var.set(f"{flag} finished with exit code {code}.")
-                    self._append_log(f"Process finished with exit code {code}.")
-                    if flag == "--setup":
-                        self.progress_var.set(100 if code == 0 else self.progress_var.get())
-                        self.progress_label.configure(text="Setup completed." if code == 0 else "Setup stopped; see log.")
-                    if flag == "--start" and code == 0:
-                        self.score_poll_enabled = True
-                    if code != 0:
-                        messagebox.showerror("Command failed", f"{flag} exited with status {code}. See cp-sim.log.")
-        except queue.Empty:
-            pass
-        self.root.after(150, process_events_with_scores, self)
-
-    app = root.children
-    # Replace the scheduled handler with one that also handles score updates.
-    root.after_cancel(root.tk.call("after", "info")[-1] if root.tk.call("after", "info") else "")
-    instance = next((child for child in []), None)
-    # The instance is held by the bound after callback; use a subclass-free wrapper.
     root.mainloop()
     return 0
 
