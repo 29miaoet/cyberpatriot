@@ -2,3 +2,6 @@
 __pycache__/
 *.py[cod]
 /Scoring Report.html
+/cp-sim.log
+/.cp-sim.pid
+/Scoring Report.md

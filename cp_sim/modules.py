@@ -34,12 +34,26 @@ def run_module_script(
     )
 
 
+def _show_setup_progress(index: int, total: int, name: str) -> None:
+    """Display progress without requiring an additional Python dependency."""
+    width = 24
+    completed = int(width * index / max(total, 1))
+    bar = "#" * completed + "-" * (width - completed)
+    if sys.stdout.isatty():
+        print(f"\rSetup [{bar}] {index}/{total}: {name:<28}", end="", flush=True)
+    else:
+        logger.info("Setup progress: %s/%s (%s).", index, total, name)
+
+
 def _run_module_scripts(modules: list[str], script_name: str, action: str) -> None:
-    for name in modules:
+    total = len(modules)
+    for index, name in enumerate(modules, start=1):
         directory = module_directory(name)
         script = directory / script_name
         if not script.exists():
             logger.info("No %s found for %s; skipping.", script_name, name)
+            if script_name == "setup.sh":
+                _show_setup_progress(index, total, name)
             continue
         if action == "fix" and name not in {"apt_sources", "uid0_accounts"}:
             if not sys.stdin.isatty():
@@ -58,18 +72,29 @@ def _run_module_scripts(modules: list[str], script_name: str, action: str) -> No
                 continue
         logger.info("Running %s for %s (--%s was supplied).", script_name, name, action)
         try:
-            result = run_module_script(script, directory, script_name, interactive=(script_name == "fix.sh"))
+            result = run_module_script(
+                script, directory, script_name,
+                interactive=(script_name == "fix.sh"),
+            )
         except subprocess.TimeoutExpired as exc:
+            if script_name == "setup.sh" and sys.stdout.isatty():
+                print()
             raise CpSimError(f"{script_name} timed out for {name}.") from exc
         if result.stdout:
             logger.info("%s", result.stdout.rstrip())
         if result.stderr:
             logger.warning("%s", result.stderr.rstrip())
         if result.returncode != 0:
+            if script_name == "setup.sh" and sys.stdout.isatty():
+                print()
             raise CpSimError(
                 f"{script_name} for {name} exited with status {result.returncode}; "
                 f"remaining {script_name} scripts were not run."
             )
+        if script_name == "setup.sh":
+            _show_setup_progress(index, total, name)
+    if script_name == "setup.sh" and sys.stdout.isatty():
+        print()
 
 
 def apply_setups(modules: list[str]) -> None:

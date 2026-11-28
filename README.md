@@ -2,28 +2,28 @@
 
 cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulator. It organizes vulnerability modules under `src/`, optionally applies each module's simulated vulnerable-state setup, and presents detector results through a local web-based scoring report.
 
-> **Safety requirement:** Run cp-sim only inside a disposable Linux virtual machine. The VM check is heuristic, not a guarantee. Take a VM snapshot before using `--apply` or `--fix`. The installer checks for a VM before installing system packages, but virtualization detection is not proof that a machine is disposable.
+> **Safety requirement:** Run cp-sim only inside a disposable Linux virtual machine. The VM check is heuristic, not a guarantee. Take a VM snapshot before using `--setup` or `--fix`. The installer checks for a VM before installing system packages, but virtualization detection is not proof that a machine is disposable.
 
 ## Project specifications
 
 1. **Target environment:** Debian/Ubuntu-based Linux virtual machines, including Ubuntu, Debian, and Linux Mint.
-2. **Single entry point:** `main.sh` is the only supported entry point. It checks the VM environment, installs missing system dependencies, creates the project virtual environment, installs Python requirements, and starts the application.
+2. **Single entry point:** `main.sh` is the only supported entry point. It checks the VM environment, installs missing system dependencies, creates the project virtual environment, installs Python requirements, and dispatches the requested lifecycle command.
 3. **Application structure:** Python application code is organized in the `cp_sim/` package by responsibility. `cp_sim/__main__.py` coordinates startup; it is not intended to be invoked directly.
 4. **Project modules:** Each vulnerability is represented by a subdirectory under `src/` (for example, `src/ufw/`).
 5. **Configuration:** The root `config.json` selects module directories through a `vulnerabilities` array. Each entry is the name of a directory directly under `src/`.
-6. **Setup scripts:** A module may contain `setup.sh`. Setup scripts never run implicitly; they execute only when the user explicitly supplies `--apply`. They prepare the configured practice state and do not run remediation scripts.
-7. **Fix scripts:** A module may contain `fix.sh`. Fix scripts execute only when the user explicitly supplies `--fix`. They remediate the configured practice state. `--apply` and `--fix` are mutually exclusive.
+6. **Setup scripts:** A module may contain `setup.sh`. Setup scripts execute only with `--setup`, which displays setup progress and does not start Flask.
+7. **Fix scripts:** A module may contain `fix.sh`. Fix scripts execute only with `--fix`. They remediate the configured practice state and retain per-module confirmation prompts. `--setup` and `--fix` are mutually exclusive.
 8. **User setup policy:** The users module's `setup.sh` creates every account listed in all four arrays in `src/users/users.json`, adds every configured account to the shared `users` group, and grants `sudo` membership to both authorized and unauthorized administrators to establish the configured practice state. Newly created accounts have locked passwords. Setup does not remove or demote accounts; remediation is exclusive to `--fix`.
 9. **User remediation policy:** The users module's `fix.sh` removes unauthorized users and strips administrative group membership from unauthorized administrators without deleting those latter accounts. If an account appears in both unauthorized lists, unauthorized-user removal takes precedence.
-10. **Application policy:** The applications module installs every package in both application arrays during `--apply`, creating the configured practice state. Its `--fix` script removes packages in `unauthorizedApplications` while leaving authorized packages installed.
-11. **Service policy:** The services module installs and enables/starts every configured service during `--apply`, including unauthorized services to establish the practice state. Its `--fix` script stops and disables unauthorized services but leaves their packages installed. Service names map to Debian package names and systemd units as documented below.
+10. **Application policy:** The applications module installs every package in both application arrays during `--setup`, creating the configured practice state. Its `--fix` script removes packages in `unauthorizedApplications` while leaving authorized packages installed.
+11. **Service policy:** The services module installs and enables/starts every configured service during `--setup`, including unauthorized services to establish the practice state. Its `--fix` script stops and disables unauthorized services but leaves their packages installed. Service names map to Debian package names and systemd units as documented below.
 12. **Generated README account lists:** When the users module is enabled, the generated desktop README displays the parsed `authorizedUsers` and `authorizedAdministrators` arrays from `src/users/users.json`.
 13. **Detection scripts:** A module may contain `detect.sh`. It returns `0` when all its checks are fixed, `1` when one or more findings remain, and any other status for detector errors.
 14. **Module index:** At startup, populate `templates/ReadMe.html` with detected distribution information and write only `~/Desktop/README.html`. The logo and background remain in `templates/` and are served by Flask at `/logo.svg` and `/background.jpg`; they are not copied to the desktop. An optional root-level `UserReadMe.html` is inserted as custom HTML.
 15. **Scoring report:** Populate `templates/ScoringReport.html` at startup and on each report request, then write the repository-root `Scoring Report.html`. Module point values come from `properties.json` (`points`, default 1). Users, applications, and services score each distinct unauthorized entry at 3 points.
-16. **Desktop shortcut:** The only generated desktop items are `~/Desktop/README.html` and `~/Desktop/Scoring Report.desktop` (the Scoring Report wrapper). The generated answer key is kept in the repository root as `Answer Key.md`, not on the desktop. The wrapper opens `http://127.0.0.1:5000/` in the default browser; it does not start or manage Flask.
+16. **Desktop shortcut:** The only generated desktop items are `~/Desktop/README.html` and `~/Desktop/Scoring Report.desktop` (the Scoring Report wrapper). The generated answer key is kept in the repository root as `Answer Key.md`, not on the desktop. The wrapper opens `http://127.0.0.1:5000/` in the default browser; start the service separately with `--start`.
 17. **Backend exposure:** Flask binds only to `127.0.0.1`; the report is intended for local access from the VM.
-18. **Long-running operation:** The Flask process remains running while the scoring page is in use. System-service installation and automatic daemonization are not included.
+18. **Long-running operation:** `--start` launches Flask as a detached background process. `--stop` shuts down the recorded server process. The process ID is stored in `.cp-sim.pid`.
 
 ## Repository structure
 
@@ -47,25 +47,25 @@ cp-sim is a Linux virtual-machine-only CyberPatriot practice and scoring simulat
 └── src/
     ├── ufw/
     │   ├── properties.json       # UFW module metadata
-    │   ├── setup.sh              # optional; only run with --apply
+    │   ├── setup.sh              # optional; only run with --setup
     │   ├── fix.sh                # optional; only run with --fix
     │   └── detect.sh             # optional; used by scoring
     ├── users/
     │   ├── properties.json       # users module metadata
     │   ├── users.json            # authorized/unauthorized account lists
-    │   ├── setup.sh              # only run with --apply
+    │   ├── setup.sh              # only run with --setup
     │   ├── fix.sh                # only run with --fix
     │   └── detect.sh             # used by scoring
     ├── applications/
     │   ├── properties.json       # application module metadata
     │   ├── applications.json     # authorized/unauthorized APT packages
-    │   ├── setup.sh              # installs configured packages with --apply
+    │   ├── setup.sh              # installs configured packages with --setup
     │   ├── fix.sh                # removes unauthorized packages with --fix
     │   └── detect.sh             # checks unauthorized package presence
     ├── services/
     │   ├── properties.json       # service module metadata
     │   ├── services.json         # authorized/unauthorized service names
-    │   ├── setup.sh              # installs, enables, and starts with --apply
+    │   ├── setup.sh              # installs, enables, and starts with --setup
     │   ├── fix.sh                # stops/disables unauthorized services with --fix
     │   └── detect.sh             # checks unauthorized service state
     ├── common.sh                 # shared helpers for module scripts
@@ -102,50 +102,57 @@ Generated at runtime in the VM:
 - `~/Desktop/README.html` — configured module index
 - `Answer Key.md` in the repository root — vulnerability descriptions and remediation guidance
 - `~/Desktop/Scoring Report.desktop` — report launcher
+- `Scoring Report.md` — generated Markdown scoring snapshot
+- `cp-sim.log` — append-only launcher, setup, Flask, and application log
+- `.cp-sim.pid` — PID of the background Flask process while it is running
 
-## Installation and launch
+## Installation and commands
 
 Run from the repository root inside a Debian/Ubuntu-based Linux VM:
 
 ```bash
 chmod +x main.sh
-./main.sh
+./main.sh --setup
 ```
 
-The launcher:
+The launcher checks for a VM, installs missing system dependencies, creates or reuses the project-local `.venv/`, and installs `requirements.txt`. The script uses `sudo` when not run as root. Internet access and permission to install APT packages are required on first setup. All launcher, module, and Flask output is appended to `cp-sim.log` in the repository root.
 
-1. Checks that it is running inside a detected VM before making system changes.
-2. Installs `python3`, `python3-venv`, `python3-pip`, and `lsb-release` with APT if they are missing.
-3. Creates the project-local `.venv/` virtual environment.
-4. Installs the packages listed in `requirements.txt`.
-5. Starts cp-sim in read-only mode by default.
+Exactly one command is required:
 
-The script uses `sudo` when not run as root. Internet access and permission to install APT packages are required on the first run. Subsequent runs reuse the virtual environment. Optional report values can be set with `CP_SIM_TEAM_ID`, `CP_SIM_TITLE`, `CP_SIM_REPORT_TITLE`, and `CP_SIM_LINUX_ROOT_POLICY` environment variables.
+| Command | Behavior |
+|---|---|
+| `--setup` | Runs configured `setup.sh` scripts with a terminal progress bar. Does not start Flask. |
+| `--start` | Starts Flask in the background, prepares the HTML artifacts, and enables live score tracking. |
+| `--stop` | Stops the background Flask process using `.cp-sim.pid`. |
+| `--fix` | Runs the existing vulnerability remediation scripts with their confirmation prompts. |
+| `--report` | Generates `Scoring Report.md` and opens it with `xdg-open`; if that is unavailable, prints the report in the terminal. |
 
-To explicitly prepare the configured practice state:
-
-```bash
-./main.sh --apply
-```
-
-To explicitly run module remediation scripts:
+Examples:
 
 ```bash
+./main.sh --setup
+./main.sh --start
+./main.sh --report
 ./main.sh --fix
+./main.sh --stop
 ```
 
-The two flags are mutually exclusive. Without either flag, neither setup nor fix scripts are executed. When `--fix` is used, the launcher asks for a separate explicit `yes` confirmation before each module remediation; declining skips that module. In non-interactive sessions, all fixes are skipped. The UID-0 account remediation also displays the exact accounts and asks for a second confirmation before deleting them; home directories are preserved.
+The flags are mutually exclusive. `--setup` and `--fix` do not start the server. `--start` is idempotent: it reports the existing process rather than starting a second instance. The Flask service binds only to `127.0.0.1:5000`. It can be stopped independently of the terminal that launched it.
 
-Do not use `--apply` or `--fix` on a host machine or a VM containing data you need to preserve. For the current UFW module, `--apply` disables UFW and `--fix` enables it. The services module starts every configured service during `--apply`, including unauthorized network services such as Postfix and Apache. Run the practice VM on an isolated virtual network; do not expose these services to a public network or a trusted LAN.
+When `--fix` is used, each module requires a separate explicit `yes` confirmation; declining skips that module. In non-interactive sessions, fixes are skipped. The UID-0 account remediation displays the exact accounts and asks for its additional confirmation before deleting them; home directories are preserved.
+
+Do not use `--setup` or `--fix` on a host machine or a VM containing data you need to preserve. For the current UFW module, `--setup` disables UFW and `--fix` enables it. The services module starts every configured service during `--setup`, including unauthorized network services such as Postfix and Apache. Run the practice VM on an isolated virtual network; do not expose these services to a public network or a trusted LAN.
 
 ## Using the scoring report
 
-- The service prints its local URL: [http://127.0.0.1:5000/](http://127.0.0.1:5000/).
-- Alternatively, double-click **Scoring Report** on the VM desktop. The Flask service must already be running.
-- Keep the terminal running while viewing the report; closing it stops the service.
+- Run `./main.sh --start` to start the background service.
+- Open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) or double-click **Scoring Report** on the VM desktop.
+- Run `./main.sh --stop` when finished.
 - Do not open `Scoring Report.html` directly as a local file. Each page load regenerates the report from current detector results.
-- The report automatically refreshes every 5 seconds. Each refresh reruns the read-only detectors; it does not run setup or remediation scripts.
-- The report lists only scored issues that have been fixed and earned points. Unresolved issues and checks that have not been fixed are omitted. If no scored issues have been fixed, the issues section is left empty. Vulnerability descriptions and remediation guidance are kept separately in the repository-root `Answer Key.md`.
+- The HTML report refreshes every 5 seconds. Each refresh reruns read-only detectors; it does not run setup or remediation scripts.
+- `./main.sh --report` generates a separate Markdown snapshot containing fixed, unresolved, and detector-error checks, their points, and the current score.
+- Vulnerability descriptions and remediation guidance are kept separately in the repository-root `Answer Key.md`.
+
 
 ## JSON configuration files
 
@@ -253,7 +260,7 @@ Account names must be valid Linux usernames; the protected `root` account is rej
 This file contains exactly two arrays of Debian package names:
 
 - `authorizedApplications`: packages that should be installed and retained.
-- `unauthorizedApplications`: packages installed by `--apply` to create the practice state and removed by `--fix`.
+- `unauthorizedApplications`: packages installed by `--setup` to create the practice state and removed by `--fix`.
 
 ```json
 {
@@ -268,7 +275,7 @@ This file contains exactly two arrays of Debian package names:
 }
 ```
 
-These values are APT package names, not display names or executable paths. The setup script installs all listed packages, including unauthorized ones, so that the detector can identify them. The fix script runs APT removal only for unauthorized packages; it does not purge package configuration or automatically remove dependencies. A package must be available from the VM's configured APT repositories for setup to succeed. In particular, `ophcrack` is in Ubuntu's `universe` component, while `zangband` is in Ubuntu's `multiverse` component and Debian's `non-free` component. Ensure the relevant component is already enabled in the VM, or remove that package from the configured list before running `--apply`.
+These values are APT package names, not display names or executable paths. The setup script installs all listed packages, including unauthorized ones, so that the detector can identify them. The fix script runs APT removal only for unauthorized packages; it does not purge package configuration or automatically remove dependencies. A package must be available from the VM's configured APT repositories for setup to succeed. In particular, `ophcrack` is in Ubuntu's `universe` component, while `zangband` is in Ubuntu's `multiverse` component and Debian's `non-free` component. Ensure the relevant component is already enabled in the VM, or remove that package from the configured list before running `--setup`.
 
 ### 7. `src/services/properties.json`
 
@@ -286,7 +293,7 @@ These values are APT package names, not display names or executable paths. The s
 This file contains exactly two arrays of supported service identifiers:
 
 - `authorizedServices`: services that should be installed, enabled, and running.
-- `unauthorizedServices`: services enabled and started by `--apply` to create the practice state, then stopped and disabled by `--fix`.
+- `unauthorizedServices`: services enabled and started by `--setup` to create the practice state, then stopped and disabled by `--fix`.
 
 ```json
 {
@@ -312,7 +319,7 @@ The service module currently accepts these identifiers and maps them to Debian p
 
 SMTP is a mail-transfer protocol, not a specific systemd service name. In this configuration, `postfix` is the concrete SMTP server implementation. Do not put the generic string `smtp` in the arrays; use a supported service identifier. The module requires systemd and uses the listed Debian package/unit mappings.
 
-During `--apply`, every configured service is installed and enabled/started, including unauthorized services. During `--fix`, unauthorized services are stopped and disabled but their packages remain installed. The detector reports an unauthorized service if it is active **or** enabled.
+During `--setup`, every configured service is installed and enabled/started, including unauthorized services. During `--fix`, unauthorized services are stopped and disabled but their packages remain installed. The detector reports an unauthorized service if it is active **or** enabled.
 
 ### Additional independently scored checklist modules
 
@@ -378,7 +385,7 @@ The UFW metadata also contains `distributions` (an array of strings) and `diffic
 
 A module is selected by its directory name in `config.json`. These scripts are optional:
 
-- `setup.sh` prepares the module's configured practice state. It may make system changes and therefore runs only under `--apply`.
+- `setup.sh` prepares the module's configured practice state. It may make system changes and therefore runs only under `--setup`.
 - `fix.sh` remediates the module's configured practice state. It may make system changes and therefore runs only under `--fix`.
 - `detect.sh` checks the relevant condition. It must use exit code `0` only when fixed, and `1` when unresolved. Other statuses are treated as errors.
 

@@ -4,6 +4,10 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
+LOG_FILE="$ROOT/cp-sim.log"
+# Keep console output visible while appending all launcher/application output to one log.
+exec > >(tee -a "$LOG_FILE") 2>&1
+
 # Refuse to install packages or run on a physical host.
 is_vm=false
 if command -v systemd-detect-virt >/dev/null 2>&1 \
