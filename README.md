@@ -145,7 +145,7 @@ Do not use `--setup` or `--fix` on a host machine or a VM containing data you ne
 
 ## Tkinter desktop GUI
 
-The optional desktop interface is in `gui/`. After running `main.sh` once to install the system dependencies (including `python3-tk`), launch it from the repository root:
+The optional desktop interface is in `gui/`. Ensure Tkinter is installed (`sudo apt install python3-tk`), then launch it from the repository root:
 
 ```bash
 python3 gui/main.py
