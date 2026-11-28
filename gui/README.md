@@ -7,11 +7,11 @@ The desktop control panel is a lightweight Tkinter application. It reads the ava
 From the repository root, inside the supported Debian/Ubuntu-based Linux VM:
 
 ```bash
-./main.sh --setup
+sudo apt install python3-tk
 python3 gui/main.py
 ```
 
-The first `main.sh` invocation installs `python3-tk` along with the simulator's other system dependencies. Tkinter is part of Python's standard library; no pip package is required.
+The GUI uses Python's standard-library Tkinter module. On Debian/Ubuntu-based systems, the GUI binding is packaged separately as `python3-tk`; install it if it is not already present. The CLI launcher also checks and installs this package when it runs.
 
 ## Features
 
