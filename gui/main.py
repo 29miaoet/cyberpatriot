@@ -223,16 +223,16 @@ class CyberPatriotGUI:
         ttk.Label(score_card, textvariable=self.score_detail_var, wraplength=500).pack(anchor="w", pady=(4, 0))
 
         ttk.Label(parent, text="Detector results", style="Section.TLabel").pack(anchor="w")
+        table_frame = ttk.Frame(parent)
+        table_frame.pack(fill=tk.BOTH, expand=True)
         columns = ("module", "status", "points", "detail")
-        self.score_tree = ttk.Treeview(parent, columns=columns, show="headings", height=10)
+        self.score_tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=10)
         for key, title, width in (
             ("module", "Check", 170), ("status", "Status", 90),
             ("points", "Points", 65), ("detail", "Details", 260),
         ):
             self.score_tree.heading(key, text=title)
             self.score_tree.column(key, width=width, anchor=tk.W)
-        table_frame = ttk.Frame(parent)
-        table_frame.pack(fill=tk.BOTH, expand=True)
         score_scroll = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.score_tree.yview)
         self.score_tree.configure(yscrollcommand=score_scroll.set)
         self.score_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
