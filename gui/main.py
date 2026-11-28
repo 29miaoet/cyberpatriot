@@ -41,15 +41,20 @@ def load_modules() -> tuple[list[dict[str, str]], list[str]]:
             continue
         name = directory.name
         display = name.replace("_", " ").replace("-", " ").title()
+        points = 1
         properties = directory / "properties.json"
         if properties.is_file():
             try:
                 data = json.loads(properties.read_text(encoding="utf-8"))
-                if isinstance(data, dict) and isinstance(data.get("name"), str):
-                    display = data["name"]
+                if isinstance(data, dict):
+                    if isinstance(data.get("name"), str):
+                        display = data["name"]
+                    value = data.get("points", 1)
+                    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                        points = value
             except (OSError, json.JSONDecodeError):
                 pass
-        modules.append({"id": name, "name": display})
+        modules.append({"id": name, "name": display, "points": str(points)})
     known = {item["id"] for item in modules}
     unknown = [name for name in enabled if name not in known]
     if unknown:
@@ -82,6 +87,7 @@ class CyberPatriotGUI:
             raise
 
         self.enabled = set(enabled)
+        self.module_info = {item["id"]: item for item in self.modules}
         self._build_ui()
         self._load_log_tail()
         self.root.after(150, self._process_events)
@@ -471,7 +477,8 @@ class CyberPatriotGUI:
                 continue
             name = str(check.get("name", "Unknown"))
             status = str(check.get("status", "error")).title()
-            points = check.get("points", 0)
+            display_name = self.module_info.get(name, {}).get("name", name.replace("_", " ").title())
+            points = check.get("points", self.module_info.get(name, {}).get("points", "1"))
             try:
                 points = float(points)
             except (TypeError, ValueError):
@@ -481,7 +488,7 @@ class CyberPatriotGUI:
                 earned += points
                 fixed += 1
             detail = str(check.get("detail") or check.get("message") or "")
-            self.score_tree.insert("", tk.END, values=(name, status, f"{points:g}", detail))
+            self.score_tree.insert("", tk.END, values=(display_name, status, f"{points:g}", detail))
         self.score_var.set(f"{earned:g} / {possible:g} points")
         self.score_detail_var.set(
             f"{fixed} of {len(checks)} checks fixed · "
