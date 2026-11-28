@@ -405,7 +405,6 @@ class CyberPatriotGUI:
                         self.progress_label.configure(text="Setup completed." if code == 0 else "Setup stopped; see log.")
                     if flag == "--start" and code == 0:
                         self.score_poll_enabled = True
-                        self._poll_scores()
                     if code != 0:
                         messagebox.showerror("Command failed", f"{flag} exited with status {code}. See cp-sim.log.")
         except queue.Empty:
@@ -498,13 +497,6 @@ class CyberPatriotGUI:
             f"{fixed} of {len(checks)} checks fixed · "
             f"{(100 * earned / possible):.1f}% score" if possible else f"{len(checks)} checks returned"
         )
-
-    def _handle_score_event(self, kind: str, payload: object) -> None:
-        if kind == "scores":
-            self._render_scores(payload)
-        elif kind == "scores_unavailable" and not self.running:
-            self.score_var.set("Scoring server unavailable")
-            self.score_detail_var.set("Use Start scoring to launch the local Flask service.")
 
     def _close(self) -> None:
         self.root.destroy()
